@@ -1,0 +1,2298 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="IRIS" version="26" zv="IRIS for Windows (x86-64) 2021.1 (Build 194U)" ts="2021-03-25 16:21:45">
+<Class name="Demo.FHIRPlace.BPL.BundleFlip">
+<Description><![CDATA[
+This component accepts FHIR Responses of type &amp;quot;searchset&amp;quot; and converts them into FHIR Requests of type &amp;quot;transaction&amp;quot; so that they can be submitted to the local FHIR Resource Repository.]]></Description>
+<Super>Ens.BusinessProcessBPL</Super>
+<TimeChanged>65828,41161.789104</TimeChanged>
+<TimeCreated>65828,36192.178941</TimeCreated>
+
+<Property name="LocalFHIREndpoint">
+<Description><![CDATA[
+FHIRServer endpoint to use when submitting external FHIR message data locally.<br><br>]]></Description>
+<Type>%String</Type>
+<Parameter name="MAXLEN" value="512"/>
+</Property>
+
+<Parameter name="SETTINGS">
+<Default>LocalFHIREndpoint:Basic:selector?context={HS.FHIRServer.Util.ContextSearch/FHIRServerEndpoints},LocalFHIRServer:Basic,LocalFHIRPort:Basic</Default>
+</Parameter>
+
+<XData name="BPL">
+<Description>
+BPL Definition</Description>
+<XMLNamespace>http://www.intersystems.com/bpl</XMLNamespace>
+<Data><![CDATA[
+<process language='objectscript' request='HS.FHIRServer.Interop.Response' response='HS.FHIRServer.Interop.Request' height='2300' width='2000' >
+<context>
+<property name='tNewQuickStreamId' type='%String' instantiate='0' >
+<parameters>
+<parameter name='MAXLEN'  value='50' />
+</parameters>
+</property>
+</context>
+<sequence xend='200' yend='1350' >
+<assign name="Get QuickStream" property="tBundle" value="##class(HS.SDA3.QuickStream).%OpenId(request.QuickStreamId)" action="set" xpos='200' ypos='250' />
+<assign name="Extract Bundle JSON" property="tBundleJSONString" value="tBundle.Read(tBundle.Size)" action="set" xpos='200' ypos='350' />
+<trace name='Check Bundle Size' value='"After read of bundle with size = "_tBundle.Size' xpos='200' ypos='450' />
+<assign name="Convert to Dynamic Object" property="tBundleDynamicOBJ" value="{}.%FromJSON(tBundleJSONString)" action="set" xpos='200' ypos='550' />
+<trace name='Check Dynamic Object' value='"Bundle as Dynamic Object: "_tBundleDynamicOBJ' xpos='200' ypos='650' />
+<assign name="Set FHIR Version" property="tMetaAPI" value="##class(HS.FHIRMeta.API).getInstance($lb(&quot;hl7.fhir.r4.core@4.0.1&quot;))" action="set" xpos='200' ypos='750' />
+<code name='Call BundleConverter' xpos='200' ypos='850' >
+<![CDATA[ Do ##class(Demo.FHIRServer.Tools.BundleConverter).ToTransactionBundle(.tBundleDynamicOBJ, tMetaAPI)]]]]><![CDATA[>
+</code>
+<assign name="Initialize New QuickStream" property="tNewQuickStream" value="##Class(HS.SDA3.QuickStream).%New()" action="set" xpos='200' ypos='950' />
+<code name='Convert JSON to QuickStream' xpos='200' ypos='1050' >
+<![CDATA[ Do tBundleDynamicOBJ.%ToJSON(tNewQuickStream)
+]]]]><![CDATA[>
+</code>
+<assign name="Save QuickStream ID" property="context.tNewQuickStreamId" value="tNewQuickStream.Id" action="set" xpos='200' ypos='1150' />
+<transform name='Build Flipped FHIR Request' class='Demo.FHIRPlace.DTL.BuildFHIRInteropRequest.BundleFlip' source='request' target='response' xpos='200' ypos='1250' />
+</sequence>
+</process>
+]]></Data>
+</XData>
+
+<Storage name="Default">
+<Type>%Storage.Persistent</Type>
+<DefaultData>BundleFlipDefaultData</DefaultData>
+<Data name="BundleFlipDefaultData">
+<Structure>listnode</Structure>
+<Subscript>"BundleFlip"</Subscript>
+<Value name="1">
+<Value>LocalFHIREndpoint</Value>
+</Value>
+</Data>
+</Storage>
+</Class>
+
+
+<Class name="Demo.FHIRPlace.BPL.FHIRDataCollector">
+<Description>
+Collect data from multiple downstream source(s).</Description>
+<Super>Ens.BusinessProcessBPL</Super>
+<TimeChanged>65828,51992.964576</TimeChanged>
+<TimeCreated>65828,36936.140619</TimeCreated>
+
+<XData name="BPL">
+<Description>
+BPL Definition</Description>
+<XMLNamespace>http://www.intersystems.com/bpl</XMLNamespace>
+<Data><![CDATA[
+<process language='objectscript' request='Demo.FHIRPlace.RecordMap.MRN.Record' response='Ens.Response' height='4050' width='2150' >
+<context>
+<property name='tFHIRGetEverythingRequest' type='HS.FHIRServer.Interop.Request' instantiate='1' />
+<property name='tFHIRGetEverythingResponse' type='HS.FHIRServer.Interop.Response' instantiate='1' />
+<property name='tFHIRSubmitRequest' type='HS.FHIRServer.Interop.Request' instantiate='1' />
+<property name='tFHIRSubmitResponse' type='HS.FHIRServer.Interop.Response' instantiate='1' />
+<property name='tFHIRExternalPatientResourceId' type='Demo.FHIRPlace.RecordMap.FHIRPatientId.Record' instantiate='0' />
+<property name='tFHIRSearchResponse' type='HS.FHIRServer.Interop.Response' instantiate='0' />
+<property name='tFHIRDeleteEverythingResponse' type='HS.FHIRServer.Interop.Response' instantiate='0' />
+</context>
+<sequence xend='200' yend='1600' >
+<transform name='Build FHIR Search Request' class='Demo.FHIRPlace.DTL.BuildFHIRInteropRequest.ExternalPatientSearch' source='request' target='tFHIRSearchRequest' xpos='200' ypos='250' />
+<sequence name='Search EMR for FHIR' xpos='200' ypos='350' xend='200' yend='1000' >
+<call name='FHIR Search to EMR (MRN)' target='FHIR.EMR.RequestSender' async='0' xpos='200' ypos='250' >
+<request type='HS.FHIRServer.Interop.Request' >
+<assign property="callrequest" value="tFHIRSearchRequest" action="set" />
+</request>
+<response type='HS.FHIRServer.Interop.Response' >
+<assign property="context.tFHIRSearchResponse" value="callresponse" action="set" />
+</response>
+</call>
+<sync name='Wait for External Get' calls='FHIR Search to EMR (MRN)' timeout='60' type='all' xpos='200' ypos='350' />
+<trace name='Search Return Status' value='"FHIR Search Response Status= "_context.tFHIRSearchResponse.Response.Status' xpos='200' ypos='450' />
+<if name='Check Search Response' condition='context.tFHIRSearchResponse.Response.Status = "200 OK"' xpos='200' ypos='550' xend='200' yend='900' >
+<true>
+<transform name='Extract Patient Resource ID' class='Demo.FHIRPlace.DTL.FHIRResponseExtract.GetPatientResourceId' source='context.tFHIRSearchResponse' target='context.tFHIRExternalPatientResourceId' xpos='470' ypos='700' />
+<trace name='External Patient Resource Id' value='"External FHIR repository saves patient under resource id: "_context.tFHIRExternalPatientResourceId.FHIRPatientId' xpos='470' ypos='800' />
+</true>
+<false>
+<trace name='FHIR Search Failure' value='"Non-200 response received for FHIR Search request."' xpos='200' ypos='700' />
+</false>
+</if>
+</sequence>
+<if name='Patient Found?' condition='context.tFHIRExternalPatientResourceId.FHIRPatientId &apos;= ""' xpos='200' ypos='450' xend='200' yend='1500' >
+<true>
+<transform name='Build FHIR Retrieve Request' class='Demo.FHIRPlace.DTL.BuildFHIRInteropRequest.ExternalPatientGetEverything' source='context.tFHIRExternalPatientResourceId' target='context.tFHIRGetEverythingRequest' xpos='470' ypos='600' />
+<sequence name='Get All FHIR Resources' xpos='470' ypos='700' xend='200' yend='550' >
+<call name='Get $everything from EMR (ResourceId)' target='FHIR.EMR.RequestSender' async='0' xpos='200' ypos='250' >
+<request type='HS.FHIRServer.Interop.Request' >
+<assign property="callrequest" value="context.tFHIRGetEverythingRequest" action="set" />
+</request>
+<response type='HS.FHIRServer.Interop.Response' >
+<assign property="context.tFHIRGetEverythingResponse" value="callresponse" action="set" />
+</response>
+</call>
+<sync name='Wait for External Get' calls='Get $everything from EMR (ResourceId)' timeout='60' type='all' xpos='200' ypos='350' />
+<trace name='Get Everything Response' value='"FHIR Get Everything Response Status= "_context.tFHIRGetEverythingResponse.Response.Status' xpos='200' ypos='450' />
+</sequence>
+<if name='Check Get Response' condition='context.tFHIRGetEverythingResponse.Response.Status = "200 OK"' xpos='470' ypos='800' xend='470' yend='1400' >
+<true>
+<sequence name='Post FHIR Locally' xpos='740' ypos='950' xend='200' yend='900' >
+<trace name='FHIR Get Everything Success' value='"Got patient $everything bundle from external FHIR repository."' xpos='200' ypos='250' />
+<sequence name='Clean Up Local FHIR' xpos='200' ypos='350' xend='200' yend='800' >
+<call name='Delete Existing Resources' target='Data.BPL.PatientDelete' async='0' xpos='200' ypos='250' >
+<annotation><![CDATA[This call will go to the component that will clear out any existing resources for the patient.  This will assure there is no outdated, or overlapping resouces in the local FHIR Repository.]]]]><![CDATA[></annotation>
+<request type='Demo.FHIRPlace.RecordMap.MRN.Record' >
+<assign property="callrequest" value="request" action="set" />
+</request>
+<response type='HS.FHIRServer.Interop.Response' >
+<assign property="context.tFHIRDeleteEverythingResponse" value="callresponse" action="set" />
+</response>
+</call>
+<sync name='Wait for Local Delete' calls='Delete Existing Resources' timeout='60' type='all' xpos='200' ypos='350' />
+<if name='Check DELETE Response' condition='(context.tFHIRDeleteEverythingResponse.Response.Status = "200") || (context.tFHIRDeleteEverythingResponse.Response.Status = "404")' xpos='200' ypos='450' xend='200' yend='700' >
+<true>
+<trace name='DELETE Everything Response' value='"Local FHIR delete completed, proceeding with FHIR data submission."' xpos='470' ypos='600' />
+</true>
+<false>
+<trace name='FHIR DELETE Failure' value='"Non-200 response received for FHIR DELETE $everything request."' xpos='200' ypos='600' />
+</false>
+</if>
+</sequence>
+<if name='Check DELETE Response' condition='(context.tFHIRDeleteEverythingResponse.Response.Status = "200") || (context.tFHIRDeleteEverythingResponse.Response.Status = "404")' xpos='200' ypos='450' xend='200' yend='800' >
+<true>
+<call name='Call Bundle Flipper' target='Data.BPL.BundleFlip' async='0' xpos='335' ypos='600' >
+<annotation><![CDATA[The Bundle Flipper takes a FHIR 'searchset' response from an external repository and "flips" it to be a 'transaction' bundle that can be submitted to IRIS for Health]]]]><![CDATA[></annotation>
+<request type='HS.FHIRServer.Interop.Response' >
+<assign property="callrequest" value="context.tFHIRGetEverythingResponse" action="set" />
+</request>
+<response type='HS.FHIRServer.Interop.Request' >
+<assign property="context.tFHIRSubmitRequest" value="callresponse" action="set" />
+</response>
+</call>
+<sequence name='POST FHIR Locally' xpos='335' ypos='700' xend='200' yend='800' >
+<if name='Cleanup Success?' condition='(context.tFHIRDeleteEverythingResponse.Response.Status = "200") || (context.tFHIRDeleteEverythingResponse.Response.Status = "404")' xpos='200' ypos='250' xend='200' yend='700' >
+<true>
+<call name='Post FHIR Locally' target='FHIR.Local.RequestHandler' async='0' xpos='335' ypos='400' >
+<request type='HS.FHIRServer.Interop.Request' >
+<assign property="callrequest" value="context.tFHIRSubmitRequest" action="set" />
+</request>
+<response type='HS.FHIRServer.Interop.Response' >
+<assign property="context.tFHIRSubmitResponse" value="callresponse" action="set" />
+</response>
+</call>
+<sync name='Wait For Local Post' calls='Post FHIR Locally' timeout='60' type='all' xpos='335' ypos='500' />
+<trace name='Local Post Response' value='"Local FHIR Post Request Status = "_context.tFHIRSubmitResponse.Response.Status' xpos='335' ypos='600' />
+</true>
+</if>
+</sequence>
+</true>
+</if>
+</sequence>
+<if name='Check Post Response' condition='context.tFHIRSubmitResponse.Response.Status = "200"' xpos='740' ypos='1050' xend='740' yend='1300' >
+<true>
+<trace name='FHIR POST Success' value='"Submitted patient in local FHIR repository."' xpos='1010' ypos='1200' />
+</true>
+<false>
+<trace name='FHIR POST Failure' value='"Non-200 response received for local FHIR Post request."' xpos='740' ypos='1200' />
+</false>
+</if>
+</true>
+<false>
+<trace name='FHIR Get Failure' value='"Non-200 response received for FHIR Get $everything request."' xpos='470' ypos='950' />
+</false>
+</if>
+</true>
+<false>
+<trace name='No Patient Found' value='"No patient found from FHIR Search request."' xpos='200' ypos='600' />
+</false>
+</if>
+</sequence>
+</process>
+]]></Data>
+</XData>
+
+<Storage name="Default">
+<Type>%Storage.Persistent</Type>
+</Storage>
+</Class>
+
+
+<Class name="Demo.FHIRPlace.BPL.PatientDelete">
+<Description>
+This component accepts an MRN and removes any resources associated with that patient from the local FHIR Repository.</Description>
+<Super>Ens.BusinessProcessBPL</Super>
+<TimeChanged>65828,50954.151673</TimeChanged>
+<TimeCreated>65828,39996.329904</TimeCreated>
+
+<Property name="LocalFHIREndpoint">
+<Description><![CDATA[
+FHIRServer endpoint to use when submitting external FHIR message data locally.<br><br>]]></Description>
+<Type>%String</Type>
+<Parameter name="MAXLEN" value="512"/>
+</Property>
+
+<Parameter name="SETTINGS">
+<Default>LocalFHIREndpoint:Basic:selector?context={HS.FHIRServer.Util.ContextSearch/FHIRServerEndpoints}</Default>
+</Parameter>
+
+<Storage name="Default">
+<Type>%Storage.Persistent</Type>
+<DefaultData>PatientDeleteDefaultData</DefaultData>
+<Data name="PatientDeleteDefaultData">
+<Structure>listnode</Structure>
+<Subscript>"PatientDelete"</Subscript>
+<Value name="1">
+<Value>LocalFHIREndpoint</Value>
+</Value>
+</Data>
+</Storage>
+
+<XData name="BPL">
+<Description>
+BPL Definition</Description>
+<XMLNamespace>http://www.intersystems.com/bpl</XMLNamespace>
+<Data><![CDATA[
+<process language='objectscript' request='Demo.FHIRPlace.RecordMap.MRN.Record' response='HS.FHIRServer.Interop.Response' height='4000' width='2000' >
+<context>
+<property name='tNewQuickStreamId' type='%String' instantiate='0' >
+<parameters>
+<parameter name='MAXLEN'  value='50' />
+</parameters>
+</property>
+<property name='tFHIRGetEverythingRequest' type='HS.FHIRServer.Interop.Request' instantiate='0' />
+<property name='tFHIRGetEverythingResponse' type='HS.FHIRServer.Interop.Response' instantiate='0' />
+<property name='tFHIRSearchRequest' type='HS.FHIRServer.Interop.Request' instantiate='0' />
+<property name='tFHIRSearchResponse' type='HS.FHIRServer.Interop.Response' instantiate='0' />
+<property name='tFHIRPatientResourceId' type='Demo.FHIRPlace.RecordMap.FHIRPatientId.Record' instantiate='0' />
+<property name='tDeleteEverythingRequest' type='HS.FHIRServer.Interop.Request' instantiate='0' />
+</context>
+<sequence xend='200' yend='2750' >
+<transform name='Build FHIR Search Request' class='Demo.FHIRPlace.DTL.BuildFHIRInteropRequest.InternalPatientSearch' source='request' target='context.tFHIRSearchRequest' xpos='200' ypos='250' />
+<call name='Search Local FHIR' target='FHIR.Local.RequestHandler' async='0' xpos='200' ypos='350' >
+<request type='HS.FHIRServer.Interop.Request' >
+<assign property="callrequest" value="context.tFHIRSearchRequest" action="set" />
+</request>
+<response type='HS.FHIRServer.Interop.Response' >
+<assign property="context.tFHIRSearchResponse" value="callresponse" action="set" />
+</response>
+</call>
+<sync name='Wait for Local Search' calls='Search Local FHIR' timeout='60' type='all' xpos='200' ypos='450' />
+<trace name='Search Return Status' value='"FHIR Search Response Status= "_context.tFHIRSearchResponse.Response.Status' xpos='200' ypos='550' />
+<if name='Check Search Response' condition='context.tFHIRSearchResponse.Response.Status = "200"' xpos='200' ypos='650' xend='200' yend='2650' >
+<true>
+<transform name='Extract Patient Resource ID' class='Demo.FHIRPlace.DTL.FHIRResponseExtract.GetPatientResourceId' source='context.tFHIRSearchResponse' target='context.tFHIRPatientResourceId' xpos='740' ypos='800' />
+<trace name='External Patient Resource Id' value='"FHIR repository saves patient under resource id: "_context.tFHIRPatientResourceId.FHIRPatientId' xpos='740' ypos='900' />
+<if name='If Patient ID Found' condition='context.tFHIRPatientResourceId.FHIRPatientId &apos;= ""' xpos='740' ypos='1000' xend='740' yend='2550' >
+<true>
+<transform name='Build Patient $Everything' class='Demo.FHIRPlace.DTL.BuildFHIRInteropRequest.InternalPatientGetEverything' source='context.tFHIRPatientResourceId' target='context.tFHIRGetEverythingRequest' xpos='1010' ypos='1150' >
+<annotation><![CDATA[Build the FHIR Request to get the Patient bundle using the $Everything parameter.  This will give us all the resources associated with this specific patient.]]]]><![CDATA[></annotation>
+</transform>
+<call name='GET $Everything Call' target='FHIR.Local.RequestHandler' async='0' xpos='1010' ypos='1250' >
+<request type='HS.FHIRServer.Interop.Request' >
+<assign property="callrequest" value="context.tFHIRGetEverythingRequest" action="set" />
+</request>
+<response type='HS.FHIRServer.Interop.Response' >
+<assign property="context.tFHIRGetEverythingResponse" value="callresponse" action="set" />
+</response>
+</call>
+<sync name='Wait for $Everything' calls='GET $Everything Call' timeout='60' type='all' xpos='1010' ypos='1350' />
+<assign name="Get QuickStream" property="tQuickStreamGetEverythingResponse" value="##class(HS.SDA3.QuickStream).%OpenId(context.tFHIRGetEverythingResponse.QuickStreamId)" action="set" xpos='1010' ypos='1450' />
+<assign name="Apply R4 Bundle Model" property="tBundleObjectGetEverythingResponse" value="##Class(HS.FHIR.DTL.vR4.Model.Resource.Bundle).FromJSON(tQuickStreamGetEverythingResponse,&quot;vR4&quot;)" action="set" xpos='1010' ypos='1550' />
+<transform name='Build FHIR Delete Bundle' class='Demo.FHIRPlace.DTL.BuildFHIRDeleteBundle' source='tBundleObjectGetEverythingResponse' target='tBundleObjectDeleteEverythingRequest' xpos='1010' ypos='1650' />
+<assign name="Initialize New QuickStream" property="tQuickStreamDeleteEverythingRequest" value="##Class(HS.SDA3.QuickStream).%New()" action="set" xpos='1010' ypos='1750' />
+<assign name="Convert Bundle to JSON" property="tBundleJSONDeleteEverythingRequest" value="tBundleObjectDeleteEverythingRequest.ToJSON()" action="set" xpos='1010' ypos='1850' />
+<assign name="Copy JSON Into QuickStream" property="tStatus" value="tQuickStreamDeleteEverythingRequest.CopyFrom(tBundleJSONDeleteEverythingRequest)" action="set" xpos='1010' ypos='1950' />
+<trace name='Check QuickStream Status' value='"Converting bundle to JSON for QuickStream returned a status of: "_tStatus' xpos='1010' ypos='2050' />
+<assign name="Store QuickStream ID" property="context.tNewQuickStreamId" value="tQuickStreamDeleteEverythingRequest.Id" action="set" xpos='1010' ypos='2150' />
+<transform name='Build FHIR Interop Request' class='Demo.FHIRPlace.DTL.BuildFHIRInteropRequest.PatientDelete' source='tQuickStreamDeleteEverythingRequest' target='context.tDeleteEverythingRequest' xpos='1010' ypos='2250' />
+<call name='Send DELETE Request' target='FHIR.Local.RequestHandler' async='0' xpos='1010' ypos='2350' >
+<request type='HS.FHIRServer.Interop.Request' >
+<assign property="callrequest" value="context.tDeleteEverythingRequest" action="set" />
+</request>
+<response type='HS.FHIRServer.Interop.Response' >
+<assign property="response" value="callresponse" action="set" />
+</response>
+</call>
+<sync name='Wait for Delete' calls='Send DELETE Request' timeout='60' type='all' xpos='1010' ypos='2450' />
+</true>
+<false>
+<trace name='No Patient Found' value='"No patient found, nothing to delete."' xpos='740' ypos='1150' />
+<assign name="Set Response" property="response" value="context.tFHIRSearchResponse" action="set" xpos='740' ypos='1250' />
+</false>
+</if>
+</true>
+<false>
+<if name='If Response 404' condition='context.tFHIRSearchResponse.Response.Status = "404"' xpos='200' ypos='800' xend='200' yend='1050' >
+<true>
+<trace name='No Patient Found' value='"No patient found, nothing to delete."' xpos='470' ypos='950' />
+</true>
+<false>
+<trace name='FHIR Search Failure' value='"Non-200 response received for FHIR Search request."' xpos='200' ypos='950' />
+</false>
+</if>
+<assign name="Set Response" property="response" value="context.tFHIRSearchResponse" action="set" xpos='200' ypos='1150' />
+</false>
+</if>
+</sequence>
+</process>
+]]></Data>
+</XData>
+</Class>
+
+
+<Class name="Demo.FHIRPlace.DTL.BuildFHIRDeleteBundle">
+<Super>Ens.DataTransformDTL</Super>
+<TimeChanged>65828,58828.918302</TimeChanged>
+<TimeCreated>65828,35758.596318</TimeCreated>
+<DependsOn>HS.FHIR.DTL.vR4.Model.Resource.Bundle</DependsOn>
+
+<Parameter name="IGNOREMISSINGSOURCE">
+<Default>1</Default>
+</Parameter>
+
+<Parameter name="REPORTERRORS">
+<Default>1</Default>
+</Parameter>
+
+<Parameter name="TREATEMPTYREPEATINGFIELDASNULL">
+<Default>0</Default>
+</Parameter>
+
+<XData name="DTL">
+<XMLNamespace>http://www.intersystems.com/dtl</XMLNamespace>
+<Data><![CDATA[
+<transform sourceClass='HS.FHIR.DTL.vR4.Model.Resource.Bundle' targetClass='HS.FHIR.DTL.vR4.Model.Resource.Bundle' create='new' language='objectscript' >
+<assign value='"transaction"' property='target.type' action='set' />
+<foreach property='source.entry()' key='k1' >
+<if condition='source.entry.(k1).resource.resourceType &apos;= ""' >
+<true>
+<assign value='"DELETE"' property='target.entry.(k1).request.method' action='set' />
+<assign value='source.entry.(k1).fullUrl' property='tResourceWithID' action='set' />
+<trace value='"Adding DELETE for resource: "_tResourceWithID' />
+<assign value='tResourceWithID' property='target.entry.(k1).request.url' action='set' />
+</true>
+</if>
+</foreach>
+</transform>
+]]></Data>
+</XData>
+</Class>
+
+
+<Class name="Demo.FHIRPlace.DTL.BuildFHIRInteropRequest.BundleFlip">
+<Super>Ens.DataTransformDTL</Super>
+<TimeChanged>65828,48947.12983</TimeChanged>
+<TimeCreated>65828,36115.083642</TimeCreated>
+<DependsOn>HS.FHIRServer.Interop.Response,HS.FHIRServer.Interop.Request</DependsOn>
+
+<Parameter name="IGNOREMISSINGSOURCE">
+<Default>1</Default>
+</Parameter>
+
+<Parameter name="REPORTERRORS">
+<Default>1</Default>
+</Parameter>
+
+<Parameter name="TREATEMPTYREPEATINGFIELDASNULL">
+<Default>0</Default>
+</Parameter>
+
+<XData name="DTL">
+<XMLNamespace>http://www.intersystems.com/dtl</XMLNamespace>
+<Data><![CDATA[
+<transform sourceClass='HS.FHIRServer.Interop.Response' targetClass='HS.FHIRServer.Interop.Request' create='new' language='objectscript' >
+<assign value='$ZDATETIME($HOROLOG,3,1)' property='target.Request.TimestampUTC' action='set' />
+<assign value='"POST"' property='target.Request.RequestMethod' action='set' />
+<assign value='process.LocalFHIREndpoint' property='target.Request.SessionApplication' action='set' />
+<assign value='0' property='target.Request.IsRecursive' action='set' />
+<assign value='context.tNewQuickStreamId' property='target.QuickStreamId' action='set' />
+<assign value='"JSON"' property='target.Request.RequestFormatCode' action='set' />
+<assign value='"JSON"' property='target.Request.ResponseFormatCode' action='set' />
+</transform>
+]]></Data>
+</XData>
+</Class>
+
+
+<Class name="Demo.FHIRPlace.DTL.BuildFHIRInteropRequest.ExternalPatientGetEverything">
+<Super>Ens.DataTransformDTL</Super>
+<TimeChanged>65828,57785.035</TimeChanged>
+<TimeCreated>65828,44777.787249</TimeCreated>
+<DependsOn>Demo.FHIRPlace.RecordMap.FHIRPatientId.Record,HS.FHIRServer.Interop.Request</DependsOn>
+
+<Parameter name="IGNOREMISSINGSOURCE">
+<Default>1</Default>
+</Parameter>
+
+<Parameter name="REPORTERRORS">
+<Default>1</Default>
+</Parameter>
+
+<Parameter name="TREATEMPTYREPEATINGFIELDASNULL">
+<Default>0</Default>
+</Parameter>
+
+<XData name="DTL">
+<XMLNamespace>http://www.intersystems.com/dtl</XMLNamespace>
+<Data><![CDATA[
+<transform sourceClass='Demo.FHIRPlace.RecordMap.FHIRPatientId.Record' targetClass='HS.FHIRServer.Interop.Request' create='new' language='objectscript' >
+<subtransform class='Demo.FHIRPlace.DTL.BuildFHIRInteropRequest.PatientGetEverythingSubTransform' targetObj='target' sourceObj='source' />
+</transform>
+]]></Data>
+</XData>
+</Class>
+
+
+<Class name="Demo.FHIRPlace.DTL.BuildFHIRInteropRequest.ExternalPatientSearch">
+<Super>Ens.DataTransformDTL</Super>
+<TimeChanged>65828,57785.035</TimeChanged>
+<TimeCreated>65828,44395.889556</TimeCreated>
+<DependsOn>Demo.FHIRPlace.RecordMap.MRN.Record,HS.FHIRServer.Interop.Request</DependsOn>
+
+<Parameter name="IGNOREMISSINGSOURCE">
+<Default>1</Default>
+</Parameter>
+
+<Parameter name="REPORTERRORS">
+<Default>1</Default>
+</Parameter>
+
+<Parameter name="TREATEMPTYREPEATINGFIELDASNULL">
+<Default>0</Default>
+</Parameter>
+
+<XData name="DTL">
+<XMLNamespace>http://www.intersystems.com/dtl</XMLNamespace>
+<Data><![CDATA[
+<transform sourceClass='Demo.FHIRPlace.RecordMap.MRN.Record' targetClass='HS.FHIRServer.Interop.Request' create='new' language='objectscript' >
+<subtransform class='Demo.FHIRPlace.DTL.BuildFHIRInteropRequest.PatientSearchSubTransform' targetObj='target' sourceObj='source' />
+</transform>
+]]></Data>
+</XData>
+</Class>
+
+
+<Class name="Demo.FHIRPlace.DTL.BuildFHIRInteropRequest.InternalPatientGetEverything">
+<Super>Ens.DataTransformDTL</Super>
+<TimeChanged>65828,57785.035</TimeChanged>
+<TimeCreated>65828,44722.005334</TimeCreated>
+<DependsOn>Demo.FHIRPlace.RecordMap.FHIRPatientId.Record,HS.FHIRServer.Interop.Request</DependsOn>
+
+<Parameter name="IGNOREMISSINGSOURCE">
+<Default>1</Default>
+</Parameter>
+
+<Parameter name="REPORTERRORS">
+<Default>1</Default>
+</Parameter>
+
+<Parameter name="TREATEMPTYREPEATINGFIELDASNULL">
+<Default>0</Default>
+</Parameter>
+
+<XData name="DTL">
+<XMLNamespace>http://www.intersystems.com/dtl</XMLNamespace>
+<Data><![CDATA[
+<transform sourceClass='Demo.FHIRPlace.RecordMap.FHIRPatientId.Record' targetClass='HS.FHIRServer.Interop.Request' create='new' language='objectscript' >
+<subtransform class='Demo.FHIRPlace.DTL.BuildFHIRInteropRequest.PatientGetEverythingSubTransform' targetObj='target' sourceObj='source' />
+<assign value='process.LocalFHIREndpoint' property='target.Request.SessionApplication' action='set' />
+</transform>
+]]></Data>
+</XData>
+</Class>
+
+
+<Class name="Demo.FHIRPlace.DTL.BuildFHIRInteropRequest.InternalPatientSearch">
+<Super>Ens.DataTransformDTL</Super>
+<TimeChanged>65828,57785.035</TimeChanged>
+<TimeCreated>65828,44461.932258</TimeCreated>
+<DependsOn>Demo.FHIRPlace.RecordMap.MRN.Record,HS.FHIRServer.Interop.Request</DependsOn>
+
+<Parameter name="IGNOREMISSINGSOURCE">
+<Default>1</Default>
+</Parameter>
+
+<Parameter name="REPORTERRORS">
+<Default>1</Default>
+</Parameter>
+
+<Parameter name="TREATEMPTYREPEATINGFIELDASNULL">
+<Default>0</Default>
+</Parameter>
+
+<XData name="DTL">
+<XMLNamespace>http://www.intersystems.com/dtl</XMLNamespace>
+<Data><![CDATA[
+<transform sourceClass='Demo.FHIRPlace.RecordMap.MRN.Record' targetClass='HS.FHIRServer.Interop.Request' create='new' language='objectscript' >
+<subtransform class='Demo.FHIRPlace.DTL.BuildFHIRInteropRequest.PatientSearchSubTransform' targetObj='target' sourceObj='source' />
+<assign value='process.LocalFHIREndpoint' property='target.Request.SessionApplication' action='set' />
+</transform>
+]]></Data>
+</XData>
+</Class>
+
+
+<Class name="Demo.FHIRPlace.DTL.BuildFHIRInteropRequest.PatientDelete">
+<Super>Ens.DataTransformDTL</Super>
+<TimeChanged>65828,40388.968764</TimeChanged>
+<TimeCreated>65828,35926.852759</TimeCreated>
+<DependsOn>HS.FHIRServer.Interop.Response,HS.FHIRServer.Interop.Request</DependsOn>
+
+<Parameter name="IGNOREMISSINGSOURCE">
+<Default>1</Default>
+</Parameter>
+
+<Parameter name="REPORTERRORS">
+<Default>1</Default>
+</Parameter>
+
+<Parameter name="TREATEMPTYREPEATINGFIELDASNULL">
+<Default>0</Default>
+</Parameter>
+
+<XData name="DTL">
+<XMLNamespace>http://www.intersystems.com/dtl</XMLNamespace>
+<Data><![CDATA[
+<transform sourceClass='HS.FHIRServer.Interop.Response' targetClass='HS.FHIRServer.Interop.Request' create='new' language='objectscript' >
+<assign value='$ZDATETIME($HOROLOG,3,1)' property='target.Request.TimestampUTC' action='set' />
+<assign value='"POST"' property='target.Request.RequestMethod' action='set' />
+<assign value='process.LocalFHIREndpoint' property='target.Request.SessionApplication' action='set' />
+<assign value='0' property='target.Request.IsRecursive' action='set' />
+<assign value='context.tNewQuickStreamId' property='target.QuickStreamId' action='set' />
+<assign value='"JSON"' property='target.Request.RequestFormatCode' action='set' />
+<assign value='"JSON"' property='target.Request.ResponseFormatCode' action='set' />
+</transform>
+]]></Data>
+</XData>
+</Class>
+
+
+<Class name="Demo.FHIRPlace.DTL.BuildFHIRInteropRequest.PatientGetEverythingSubTransform">
+<Super>Ens.DataTransformDTL</Super>
+<TimeChanged>65828,57785.035</TimeChanged>
+<TimeCreated>65828,44676.334639</TimeCreated>
+<DependsOn>Demo.FHIRPlace.RecordMap.FHIRPatientId.Record,HS.FHIRServer.Interop.Request</DependsOn>
+
+<Parameter name="IGNOREMISSINGSOURCE">
+<Default>1</Default>
+</Parameter>
+
+<Parameter name="REPORTERRORS">
+<Default>1</Default>
+</Parameter>
+
+<Parameter name="TREATEMPTYREPEATINGFIELDASNULL">
+<Default>0</Default>
+</Parameter>
+
+<XData name="DTL">
+<XMLNamespace>http://www.intersystems.com/dtl</XMLNamespace>
+<Data><![CDATA[
+<transform sourceClass='Demo.FHIRPlace.RecordMap.FHIRPatientId.Record' targetClass='HS.FHIRServer.Interop.Request' create='new' language='objectscript' >
+<assign value='$ZDATETIME($HOROLOG,3,1)' property='target.Request.TimestampUTC' action='set' />
+<assign value='"GET"' property='target.Request.RequestMethod' action='set' />
+<assign value='"/Patient/"_source.FHIRPatientId_"/$everything"' property='target.Request.RequestPath' action='set' />
+<assign value='0' property='target.Request.IsRecursive' action='set' />
+<assign value='"JSON"' property='target.Request.RequestFormatCode' action='set' />
+<assign value='"JSON"' property='target.Request.ResponseFormatCode' action='set' />
+</transform>
+]]></Data>
+</XData>
+</Class>
+
+
+<Class name="Demo.FHIRPlace.DTL.BuildFHIRInteropRequest.PatientSearchSubTransform">
+<Super>Ens.DataTransformDTL</Super>
+<TimeChanged>65828,57785.035</TimeChanged>
+<TimeCreated>65828,44266.193196</TimeCreated>
+<DependsOn>Demo.FHIRPlace.RecordMap.MRN.Record,HS.FHIRServer.Interop.Request</DependsOn>
+
+<Parameter name="IGNOREMISSINGSOURCE">
+<Default>1</Default>
+</Parameter>
+
+<Parameter name="REPORTERRORS">
+<Default>1</Default>
+</Parameter>
+
+<Parameter name="TREATEMPTYREPEATINGFIELDASNULL">
+<Default>0</Default>
+</Parameter>
+
+<XData name="DTL">
+<XMLNamespace>http://www.intersystems.com/dtl</XMLNamespace>
+<Data><![CDATA[
+<transform sourceClass='Demo.FHIRPlace.RecordMap.MRN.Record' targetClass='HS.FHIRServer.Interop.Request' create='new' language='objectscript' >
+<assign value='$ZDATETIME($HOROLOG,3,1)' property='target.Request.TimestampUTC' action='set' />
+<assign value='"GET"' property='target.Request.RequestMethod' action='set' />
+<assign value='"Patient"' property='target.Request.RequestPath' action='set' />
+<assign value='"identifier="_source.MRN' property='target.Request.QueryString' action='set' />
+<assign value='0' property='target.Request.IsRecursive' action='set' />
+<assign value='"JSON"' property='target.Request.RequestFormatCode' action='set' />
+<assign value='"JSON"' property='target.Request.ResponseFormatCode' action='set' />
+</transform>
+]]></Data>
+</XData>
+</Class>
+
+
+<Class name="Demo.FHIRPlace.DTL.FHIRResponseExtract.GetPatientResourceId">
+<Super>Ens.DataTransformDTL</Super>
+<TimeChanged>65828,57785.035</TimeChanged>
+<TimeCreated>65828,35783.468561</TimeCreated>
+<DependsOn>HS.FHIRServer.Interop.Response,Demo.FHIRPlace.RecordMap.FHIRPatientId.Record</DependsOn>
+
+<Parameter name="IGNOREMISSINGSOURCE">
+<Default>1</Default>
+</Parameter>
+
+<Parameter name="REPORTERRORS">
+<Default>1</Default>
+</Parameter>
+
+<Parameter name="TREATEMPTYREPEATINGFIELDASNULL">
+<Default>0</Default>
+</Parameter>
+
+<XData name="DTL">
+<XMLNamespace>http://www.intersystems.com/dtl</XMLNamespace>
+<Data><![CDATA[
+<transform sourceClass='HS.FHIRServer.Interop.Response' targetClass='Demo.FHIRPlace.RecordMap.FHIRPatientId.Record' create='new' language='objectscript' >
+<code>
+<![CDATA[ Set tQuickStream = ##Class(HS.SDA3.QuickStream).%OpenId(source.QuickStreamId)]]]]><![CDATA[></code>
+<subtransform class='Demo.FHIRPlace.DTL.FHIRResponseExtract.QuickStreamToJSON' targetObj='tRawJSON' sourceObj='tQuickStream' >
+<annotation>Passes in a QuickStream object and gets back the raw JSON of the stream as a %DynamicObject.</annotation>
+</subtransform>
+<if condition='$IsObject(tRawJSON.entry)=1' >
+<true>
+<assign value='tRawJSON.entry.%GetIterator()' property='tEntryIterator' action='set' />
+<code>
+<![CDATA[ While tEntryIterator.%GetNext(.tKey, .tValue) {
+   If $IsObject(tValue.resource) {
+     If tValue.resource.resourceType = "Patient" {
+       Set tPatientResourceId = tValue.resource.id
+       Quit
+     }
+   }
+ }]]]]><![CDATA[></code>
+<assign value='tPatientResourceId' property='target.FHIRPatientId' action='set' />
+</true>
+</if>
+</transform>
+]]></Data>
+</XData>
+</Class>
+
+
+<Class name="Demo.FHIRPlace.DTL.FHIRResponseExtract.QuickStreamToJSON">
+<Super>Ens.DataTransformDTL</Super>
+<TimeChanged>65828,55006.73419</TimeChanged>
+<TimeCreated>65750,55214.971208</TimeCreated>
+<DependsOn>HS.SDA3.QuickStream,%Library.DynamicObject</DependsOn>
+
+<Parameter name="IGNOREMISSINGSOURCE">
+<Default>1</Default>
+</Parameter>
+
+<Parameter name="REPORTERRORS">
+<Default>1</Default>
+</Parameter>
+
+<Parameter name="TREATEMPTYREPEATINGFIELDASNULL">
+<Default>0</Default>
+</Parameter>
+
+<XData name="DTL">
+<XMLNamespace>http://www.intersystems.com/dtl</XMLNamespace>
+<Data><![CDATA[
+<transform sourceClass='HS.SDA3.QuickStream' targetClass='%Library.DynamicObject' create='new' language='objectscript' >
+<code>
+<![CDATA[ Set target = ##Class(%Library.DynamicObject).%FromJSON(source)]]]]><![CDATA[></code>
+</transform>
+]]></Data>
+</XData>
+</Class>
+
+
+<Class name="Demo.FHIRPlace.DTL.HL7v2.ExtractMRN">
+<Super>Ens.DataTransformDTL</Super>
+<TimeChanged>65828,57785.035</TimeChanged>
+<TimeCreated>65828,38926.722258</TimeCreated>
+<DependsOn>EnsLib.HL7.Message,Demo.FHIRPlace.RecordMap.MRN.Record</DependsOn>
+
+<Parameter name="IGNOREMISSINGSOURCE">
+<Default>1</Default>
+</Parameter>
+
+<Parameter name="REPORTERRORS">
+<Default>1</Default>
+</Parameter>
+
+<Parameter name="TREATEMPTYREPEATINGFIELDASNULL">
+<Default>0</Default>
+</Parameter>
+
+<XData name="DTL">
+<XMLNamespace>http://www.intersystems.com/dtl</XMLNamespace>
+<Data><![CDATA[
+<transform sourceClass='EnsLib.HL7.Message' targetClass='Demo.FHIRPlace.RecordMap.MRN.Record' sourceDocType='2.3.1:ORU_R01' create='new' language='objectscript' >
+<foreach property='source.{PIDgrpgrp()}' key='k1' >
+<foreach property='source.{PIDgrpgrp(k1).PIDgrp.PID:PatientIdentifierList()}' key='k2' >
+<if condition='source.{PIDgrpgrp(k1).PIDgrp.PID:PatientIdentifierList(k2).identifiertypecode} = "MR"' >
+<true>
+<assign value='source.{PIDgrpgrp(k1).PIDgrp.PID:PatientIdentifierList(k2).ID}' property='target.MRN' action='set' />
+</true>
+</if>
+</foreach>
+</foreach>
+</transform>
+]]></Data>
+</XData>
+</Class>
+
+
+<Class name="Demo.FHIRPlace.RecordMap.FHIRPatientId.Record">
+<Description>
+RECORDMAP: Generated from RecordMap 'Demo.FHIRPlace.RecordMap.FHIRPatientId'
+on 2021-03-25 at 15:02:12.720 [2021-03-25 20:02:12.720 UTC]
+by user jeff</Description>
+<ProcedureBlock>1</ProcedureBlock>
+<Super>%Persistent,%XML.Adaptor,Ens.Request,EnsLib.RecordMap.Base</Super>
+<TimeChanged>65828,57732.853001</TimeChanged>
+<TimeCreated>65828,57732.720399</TimeCreated>
+<Inheritance>right</Inheritance>
+
+<Parameter name="INCLUDETOPFIELDS">
+<Default>1</Default>
+</Parameter>
+
+<Property name="FHIRPatientId">
+<Type>%String</Type>
+<Required>1</Required>
+</Property>
+
+<Parameter name="RECORDMAPGENERATED">
+<Default>1</Default>
+</Parameter>
+
+<Storage name="Default">
+<Type>%Storage.Persistent</Type>
+<DataLocation>^Demo.FHIRPlace.RecorEF2.RecordD</DataLocation>
+<DefaultData>RecordDefaultData</DefaultData>
+<IdLocation>^Demo.FHIRPlace.RecorEF2.RecordD</IdLocation>
+<IndexLocation>^Demo.FHIRPlace.RecorEF2.RecordI</IndexLocation>
+<StreamLocation>^Demo.FHIRPlace.RecorEF2.RecordS</StreamLocation>
+<ExtentSize>2000000</ExtentSize>
+<Data name="RecordDefaultData">
+<Structure>listnode</Structure>
+<Subscript/>
+<Value name="1">
+<Value>%%CLASSNAME</Value>
+</Value>
+<Value name="2">
+<Value>FHIRPatientId</Value>
+</Value>
+<Value name="3">
+<Value>%Source</Value>
+</Value>
+</Data>
+</Storage>
+</Class>
+
+
+<Class name="Demo.FHIRPlace.RecordMap.MRN">
+<Description>
+RECORDMAP: Modified during compilation of RecordMap 'Demo.FHIRPlace.RecordMap.MRN'
+on 2021-03-25 at 15:02:42.154 [2021-03-25 20:02:42.154 UTC]
+by user jeff</Description>
+<Super>EnsLib.RecordMap.RecordMap</Super>
+<TimeChanged>65828,57762.15534</TimeChanged>
+<TimeCreated>65828,35837.734255</TimeCreated>
+
+<Method name="GetObject">
+<Description>
+Method to retrieve a record from a stream or device. This method will be generated based on the
+structure of the RecordMap. For testing purposes, a file name may be passed in the pStream argument.</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec><![CDATA[pStream:%IO.DeviceStream,*pObject:%RegisteredObject,pTimeout:%Numeric=-1,&pLookAhead:%String="",pLabelFound:%Boolean=0]]></FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	Try {
+		Set tStatus = $$$OK
+		Set pObject = $$$NULLOREF
+		If '$IsObject(pStream) {
+			Set tFilename = pStream
+			Set pStream = ##class(%IO.FileStream).%New()
+			Do pStream.Open(tFilename,,pTimeout,"UTF-8", .tStatus)
+			If $$$ISERR(tStatus) Quit
+		}
+		Set tObjectName = $parameter($this,"OBJECTNAME")
+		Set tObject = $classmethod(tObjectName,"%New")
+		If '$IsObject(tObject) {
+			Set tStatus = $$$ERROR($$$CannotCreateObject,tObjectName)
+			Quit
+		}
+		Set tObject.%Source = pStream.Name
+		Set tGetTopFields = $parameter(tObject,"INCLUDETOPFIELDS")
+		If pStream.AtEnd && (""=pLookAhead) {
+			Set tStatus = $$$ERROR($$$EnsRecordMapErrStreamAtEnd, pStream.Name)
+			Quit
+		}
+		Set pStream.CharEncoding = "UTF-8"
+
+		#; Parse incoming stream
+		Set tStatus = ..GetRecord(pStream, tObject, tGetTopFields, pTimeout, .pLookAhead, pLabelFound)
+		If $$$ISERR(tStatus) Quit
+	}
+	Catch ex {
+		Set tStatus = ex.AsStatus()
+	}
+	If $$$ISERR(tStatus) { Set pObject = $$$NULLOREF }
+	Else { Set pObject = tObject }
+	Quit tStatus
+]]></Implementation>
+</Method>
+
+<Method name="PutObject">
+<Description>
+Method to write a record to a stream or device. This method will be generated based on the
+structure of the RecordMap. For testing purposes, a file name may be passed in the pStream argument.</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec><![CDATA[pStream:%IO.DeviceStream,pObject:%RegisteredObject,pFlush:%Boolean=1,&pPadArray:%String]]></FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	Try {
+		Set tStatus = $$$OK
+		If '$IsObject(pStream) {
+			Set tFilename = pStream
+			Set pStream = ##class(%IO.FileStream).%New()
+			Do pStream.Open(tFilename,"WAE",,"UTF-8", .tStatus)
+			If $$$ISERR(tStatus) Quit
+		}
+		Set tHasTopFields = $parameter(pObject,"INCLUDETOPFIELDS")
+		Set pStream.CharEncoding = "UTF-8"
+
+		Set tStatus = ..PutRecord(pStream, pObject, tHasTopFields, .pPadArray)
+		If $$$ISERR(tStatus) Quit
+		If pFlush Do pStream.Flush(.tStatus)
+		If $$$ISERR(tStatus) Quit
+	}
+	Catch ex {
+		Set tStatus = ex.AsStatus()
+	}
+	Quit tStatus
+]]></Implementation>
+</Method>
+
+<Parameter name="OBJECTNAME">
+<Default>Demo.FHIRPlace.RecordMap.MRN.Record</Default>
+</Parameter>
+
+<Method name="GetRecord">
+<Description>
+Internal helper method to perform parse of incoming data</Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<FormalSpec><![CDATA[pStream:%IO.DeviceStream,pObject:%RegisteredObject,pGetTopFields:%Boolean,pTimeout:%Numeric,&pLookAhead:%String="",pLabelFound:%Boolean=0]]></FormalSpec>
+<Private>1</Private>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	Set tStatus = $$$OK
+	If pLabelFound { Set tRecLabel = "" } 
+	Else { Set tRecLabel = "" } 
+	Set tStatus = ..chunkRecord(pStream, .tRecordData, .tCharCount, "", pTimeout, $char(13,10), tRecLabel, .pLookAhead, "")
+	If $$$ISERR(tStatus) Quit tStatus
+	Set tMaxLocal = $$$MaxLocalLength
+	Set tRecordData("charcount") = +$get(tCharCount)
+	Set tCurrChunk = 1
+	Set tTopPiece = 1
+	Set tCurrSep = 1
+	Set tStrings = 1
+	Set tCurrString = ""
+	Set tSeps = $listbuild($char(44))
+	If '$data(tRecordData(tCurrChunk, "block")) {
+		Set tCurrString = $piece(tRecordData(tCurrChunk), $char(44), tTopPiece)
+	}
+	Else {
+		Set tCurrString = tRecordData(tCurrChunk)
+		Set tCurrPiece = 1
+	}
+	Do ..checkMerge(.tCurrChunk, .tRecordData, .tCurrString, $char(44), .tTopPiece)
+	If pGetTopFields {
+		Set pObject.MRN = tCurrString
+	}
+	Quit tStatus
+]]></Implementation>
+</Method>
+
+<Method name="PutRecord">
+<Description>
+Internal helper method to output object to a stream</Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<FormalSpec><![CDATA[pStream:%IO.DeviceStream,pObject:%RegisteredObject,pHasTopFields:%Boolean,&pPadArray:%String]]></FormalSpec>
+<Private>1</Private>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	Set tStatus = $$$OK
+	Set tmpStream=##class(%Stream.TmpBinary).%New()
+	Do tmpStream.Write($select(pHasTopFields: pObject.MRN,1: ""))
+	Set tStatus = tmpStream.Write($char(13,10))
+	If $$$ISERR(tStatus) Quit tStatus
+	Do pStream.CopyFrom(tmpStream,,0,.tStatus)
+	Quit tStatus
+]]></Implementation>
+</Method>
+
+<Method name="GetGeneratedClasses">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>*pClasses:%String</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	Kill pClasses
+	Set pClasses("Demo.FHIRPlace.RecordMap.MRN.Record")=""
+	Set pClasses($classname())=""
+	Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="getIdentifier">
+<ClassMethod>1</ClassMethod>
+<CodeMode>expression</CodeMode>
+<FormalSpec/>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[""
+]]></Implementation>
+</Method>
+
+<Method name="getType">
+<ClassMethod>1</ClassMethod>
+<CodeMode>expression</CodeMode>
+<FormalSpec/>
+<ReturnType>EnsLib.RecordMap.Model.DataType.RecordType</ReturnType>
+<Implementation><![CDATA["delimited"
+]]></Implementation>
+</Method>
+
+<XData name="RecordMap">
+<XMLNamespace>http://www.intersystems.com/Ensemble/RecordMap</XMLNamespace>
+<Data><![CDATA[
+<Record xmlns="http://www.intersystems.com/Ensemble/RecordMap" name="Demo.FHIRPlace.RecordMap.MRN" type="delimited" char_encoding="UTF-8" targetClassname="Demo.FHIRPlace.RecordMap.MRN.Record" recordTerminator="\x0d\x0a">
+  <Separators>
+    <Separator>,</Separator>
+  </Separators>
+  <Field name="MRN" required="1" ignored="0" datatype="%String" repeating="0">
+  </Field>
+</Record>
+]]></Data>
+</XData>
+</Class>
+
+
+<Class name="Demo.FHIRPlace.RecordMap.MRN.Record">
+<Description>
+RECORDMAP: Generated from RecordMap 'Demo.FHIRPlace.RecordMap.MRN'
+on 2021-03-25 at 15:02:42.143 [2021-03-25 20:02:42.143 UTC]
+by user jeff</Description>
+<ProcedureBlock>1</ProcedureBlock>
+<Super>%Persistent,%XML.Adaptor,Ens.Request,EnsLib.RecordMap.Base</Super>
+<TimeChanged>65828,57762.179352</TimeChanged>
+<TimeCreated>65828,57762.143938</TimeCreated>
+<Inheritance>right</Inheritance>
+
+<Parameter name="INCLUDETOPFIELDS">
+<Default>1</Default>
+</Parameter>
+
+<Property name="MRN">
+<Type>%String</Type>
+<Required>1</Required>
+</Property>
+
+<Parameter name="RECORDMAPGENERATED">
+<Default>1</Default>
+</Parameter>
+
+<Storage name="Default">
+<Type>%Storage.Persistent</Type>
+<DataLocation>^Demo.FHIRPlace.Reco90F0.RecordD</DataLocation>
+<DefaultData>RecordDefaultData</DefaultData>
+<IdLocation>^Demo.FHIRPlace.Reco90F0.RecordD</IdLocation>
+<IndexLocation>^Demo.FHIRPlace.Reco90F0.RecordI</IndexLocation>
+<StreamLocation>^Demo.FHIRPlace.Reco90F0.RecordS</StreamLocation>
+<ExtentSize>2000000</ExtentSize>
+<Data name="RecordDefaultData">
+<Structure>listnode</Structure>
+<Subscript/>
+<Value name="1">
+<Value>%%CLASSNAME</Value>
+</Value>
+<Value name="2">
+<Value>MRN</Value>
+</Value>
+<Value name="3">
+<Value>%Source</Value>
+</Value>
+</Data>
+</Storage>
+</Class>
+
+
+<Class name="Demo.FHIRPlace.RuleSet.HL7v2.MRNExtractor">
+<Description>
+</Description>
+<Super>Ens.Rule.Definition</Super>
+<TimeChanged>65828,39658.242515</TimeChanged>
+<TimeCreated>65828,39576.006919</TimeCreated>
+
+<Parameter name="RuleAssistClass">
+<Default>EnsLib.HL7.MsgRouter.RuleAssist</Default>
+</Parameter>
+
+<XData name="RuleDefinition">
+<XMLNamespace>http://www.intersystems.com/rule</XMLNamespace>
+<Data><![CDATA[
+<ruleDefinition alias="" context="EnsLib.HL7.MsgRouter.RoutingEngine" production="SUREFHIRPKG.FoundationProduction">
+<ruleSet name="" effectiveBegin="" effectiveEnd="">
+<rule name="" disabled="false">
+<constraint name="docCategory" value="2.3.1"></constraint>
+<when condition="1">
+<send transform="Demo.FHIRPlace.DTL.HL7v2.ExtractMRN" target="Data.BPL.PatientRecordCollector"></send>
+<return></return>
+</when>
+</rule>
+</ruleSet>
+</ruleDefinition>
+]]></Data>
+</XData>
+</Class>
+
+
+<Class name="Demo.FHIRServer.Tools.BundleConverter">
+<Abstract>1</Abstract>
+<IncludeCode>HS.FHIRServer</IncludeCode>
+<TimeChanged>65822,50464.458031</TimeChanged>
+<TimeCreated>65822,48626.013238</TimeCreated>
+
+<Method name="ToTransactionBundle">
+<Description><![CDATA[
+API Method<br>
+@API.Method<br>
+Convert a FHIR searchset Bundle into a transaction Bundle that consists of all POST entries.<br>
+<br>
+Input:<br>
+- bundle  : (required) %DynamicObject representation of a FHIR searchset Bundle.<br>
+- metaAPI : (required) Instance of metadata package API object for the Bundle input.<br>
+<br>
+Output:<br>
+- bundle  : Bundle input object, with conversion applied.<br>
+<br>
+Example:<br>
+Set metaAPI = ##class(HS.FHIRMeta.API).getInstance($lb("hl7.fhir.r4.core@4.0.1"))<br>
+Set bundle = {}.%FromJSON("<file_name>")<br>
+Do ##class(HS.FHIRServer.Tools.BundleConverter).ToTransactionBundle(.bundle, metaAPI)<br>
+Write ##class(HS.FHIRServer.Util.JsonHelper).ToJSONString(bundle, "  ",$Char(13,10))<br>
+<br>]]></Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec><![CDATA[&bundle:%DynamicObject,metaAPI:HS.FHIRMeta.API]]></FormalSpec>
+<Implementation><![CDATA[
+	if '$IsObject(bundle) || (bundle.resourceType '= "Bundle") {
+		$$$ThrowError($$$HSFHIRErrAPIContractViolation, "Input must be a Json %DynamicObject FHIR resource of type 'Bundle'")
+	}
+	if bundle.type '= "searchset" {
+		$$$ThrowError($$$HSFHIRErrAPIContractViolation, "Input Bundle must be of type 'searchset'")
+	}
+	
+	// First enumerate all internal link targets
+	Set entryIter = bundle.entry.%GetIterator()
+	while(entryIter.%GetNext(.ord, .entry)) {
+		Set targetKey = $Piece(entry.fullUrl,"/",*-1,*)
+		if $D(MAP("MAP", targetKey)) {
+			$$$ThrowError($$$GeneralError, "Resource Id '" _ targetKey _ "' appears twice in the input Bundle")
+		}
+		set uuid = ..CreateUUID()
+		Set visitContext("MAP", targetKey) = uuid
+		Set entry.fullUrl = uuid
+	}
+	// Now run through all references in the bundle and resolve those to target keys
+	// Prepare Visit Context for reference walking
+	Set visitContext("schema") = metaAPI
+	Set visitContext("callbackClass") = $classname()
+	Set visitContext("callbackMethod") = "UnResolveReference"
+
+	// Check every reference field in every entry that provides a resource.  If the
+	// reference contains an intra-bundle reference, convert the reference to a GUID
+	// so we can resolve it when the referenced resource is POST'ed.
+	Set entryIter = bundle.entry.%GetIterator()
+	while(entryIter.%GetNext(.ord, .entryObj)) {
+		if entryObj.resource '= "" {
+			Do ##class(HS.FHIRServer.Util.ReferenceVisitor).VisitAll(entryObj.resource, .visitContext)
+			// Remove the 'search' property
+			Do entryObj.%Remove("search")
+			// Add the request property
+			Do entryObj.%Set("request", { "method": "POST", "url": (entryObj.resource.resourceType) })
+		}
+	}
+
+	// Complete the conversion
+	set bundle.type="transaction"
+	Do bundle.%Remove("total")
+	Do bundle.%Remove("link")
+	Do bundle.%Remove("timestamp")
+	set bundle.id = $Extract(..CreateUUID(), 10, *)
+	
+	return bundle
+]]></Implementation>
+</Method>
+
+<Method name="CreateUUID">
+<ClassMethod>1</ClassMethod>
+<CodeMode>expression</CodeMode>
+<Implementation><![CDATA["urn:uuid:" _ $ZCVT($SYSTEM.Util.CreateGUID(),"L")
+]]></Implementation>
+</Method>
+
+<Method name="UnResolveReference">
+<ClassMethod>1</ClassMethod>
+<FormalSpec><![CDATA[&visitContext,pRefObj:%DynamicObject]]></FormalSpec>
+<Implementation><![CDATA[
+	if $D(visitContext("MAP", pRefObj.reference), targetKey) {
+		set pRefObj.reference = targetKey
+	}
+]]></Implementation>
+</Method>
+</Class>
+
+
+<Class name="Demo.FHIRStarter.BPL.LegacyDataConverter">
+<Description>
+Consumes message objects of various types and transforms their contents into SDA3 Container stream</Description>
+<Super>Ens.BusinessProcessBPL</Super>
+<TimeChanged>65828,58233.962218</TimeChanged>
+<TimeCreated>65405,65511.832033</TimeCreated>
+
+<Storage name="Default">
+<Type>%Storage.Persistent</Type>
+</Storage>
+
+<XData name="BPL">
+<Description>
+BPL Definition</Description>
+<XMLNamespace>http://www.intersystems.com/bpl</XMLNamespace>
+<Data><![CDATA[
+<process language='objectscript' request='Ens.Request' response='Ens.Response' height='2000' width='2000' >
+<context>
+<property name='requestType' type='%String' instantiate='0' >
+<parameters>
+<parameter name='MAXLEN'  value='50' />
+</parameters>
+</property>
+<property name='status' type='%Library.Status' instantiate='0' />
+<property name='streamContainer' type='Ens.StreamContainer' instantiate='1' />
+<property name='transformer' type='HS.Util.XSLTTransformer' instantiate='1' />
+<property name='sdaStream' type='%Stream.GlobalCharacter' instantiate='1' />
+<property name='sdaObject' type='HS.SDA3.Container' instantiate='0' />
+</context>
+<sequence xend='200' yend='1100' >
+<assign name="Message Object Type" property="context.requestType" value="request.%ClassName(1)" action="set" xpos='200' ypos='250' />
+<switch name='Transform Flow' xpos='200' ypos='350' xend='200' yend='1000' >
+<case condition='context.requestType="Ens.StreamContainer"' name='CDA XML Message' >
+<trace name='Object Type' value='context.requestType' xpos='335' ypos='500' />
+<assign name="Transform CDA to SDA" property="context.status" value="context.transformer.Transform(request.StreamGet(),&quot;SDA3/CCDAv21-to-SDA.xsl&quot;,context.sdaStream)" action="set" xpos='335' ypos='600' />
+<assign name="Package Stream Container" property="context.status" value="context.streamContainer.StreamSet(context.sdaStream)" action="set" xpos='335' ypos='700' />
+<call name='Dispatch to Traget' target='Data.Process.SDAtoFHIR' async='1' xpos='335' ypos='800' >
+<request type='Ens.StreamContainer' >
+<assign property="callrequest" value="context.streamContainer" action="set" />
+</request>
+<response type='Ens.Response' >
+<assign property="response" value="callresponse" action="set" />
+</response>
+</call>
+</case>
+<case condition='context.requestType="EnsLib.HL7.Message"' name='HL7 Message' >
+<trace name='Object Type' value='context.requestType' xpos='605' ypos='500' />
+<assign name="Transform HL7v2 to SDA" property="context.sdaStream" value="##class(Demo.FHIRStarter.Util.FunctionSet).GetSDAFromHL7(request)" action="set" xpos='605' ypos='600' />
+<assign name="Package Stream Container" property="context.status" value="context.streamContainer.StreamSet(context.sdaStream)" action="set" xpos='605' ypos='700' />
+<call name='Dispatch to Target' target='Data.Process.SDAtoFHIR' async='1' xpos='605' ypos='800' >
+<request type='Ens.StreamContainer' >
+<assign property="callrequest" value="context.streamContainer" action="set" />
+</request>
+<response type='Ens.Response' >
+<assign property="response" value="callresponse" action="set" />
+</response>
+</call>
+</case>
+<case condition='context.requestType="Demo.FHIRStarter.RecordMap.Patient.Record"' name='Record Map Message' >
+<trace name='Object Type' value='context.requestType' xpos='875' ypos='500' />
+<transform name='Transform CSV to SDA' class='Demo.FHIRStarter.DTL.PatientCSVtoSDA' source='request' target='context.sdaObject' xpos='875' ypos='600' />
+<assign name="Generate SDA Stream" property="context.status" value="context.sdaObject.ToQuickXMLStream(context.sdaStream)" action="set" xpos='875' ypos='700' />
+<assign name="Package Stream Container" property="context.status" value="context.streamContainer.StreamSet(context.sdaStream)" action="set" xpos='875' ypos='800' />
+<call name='Dispatch to Target' target='Data.Process.SDAtoFHIR' async='1' xpos='875' ypos='900' >
+<request type='Ens.StreamContainer' >
+<assign property="callrequest" value="context.streamContainer" action="set" />
+</request>
+<response type='Ens.Response' >
+<assign property="response" value="callresponse" action="set" />
+</response>
+</call>
+</case>
+<case condition='context.requestType="EnsLib.EDI.XML.Document"' name='Custom XML Message' >
+<trace name='Object Type' value='context.requestType' xpos='1145' ypos='500' />
+<transform name='Transform XML VDoc to SDA' class='Demo.FHIRStarter.DTL.XMLvDOCtoSDA' source='request' target='context.sdaObject' xpos='1145' ypos='600' />
+<assign name="Generate SDA Stream" property="context.status" value="context.sdaObject.ToQuickXMLStream(context.sdaStream)" action="set" xpos='1145' ypos='700' />
+<assign name="Package Stream Container" property="context.status" value="context.streamContainer.StreamSet(context.sdaStream)" action="set" xpos='1145' ypos='800' />
+<call name='Dispatch to Target' target='Data.Process.SDAtoFHIR' async='1' xpos='1145' ypos='900' >
+<request type='Ens.StreamContainer' >
+<assign property="callrequest" value="context.streamContainer" action="set" />
+</request>
+<response type='Ens.Response' >
+<assign property="response" value="callresponse" action="set" />
+</response>
+</call>
+</case>
+<default name='default' />
+</switch>
+</sequence>
+</process>
+]]></Data>
+</XData>
+</Class>
+
+
+<Class name="Demo.FHIRStarter.DTL.PatientCSVtoSDA">
+<Super>Ens.DataTransformDTL</Super>
+<TimeChanged>65806,70550.03487</TimeChanged>
+<TimeCreated>65806,50335.764886</TimeCreated>
+<DependsOn>Demo.FHIRStarter.RecordMap.Patient.Record,HS.SDA3.Container</DependsOn>
+
+<Parameter name="IGNOREMISSINGSOURCE">
+<Default>1</Default>
+</Parameter>
+
+<Parameter name="REPORTERRORS">
+<Default>1</Default>
+</Parameter>
+
+<Parameter name="TREATEMPTYREPEATINGFIELDASNULL">
+<Default>0</Default>
+</Parameter>
+
+<XData name="DTL">
+<XMLNamespace>http://www.intersystems.com/dtl</XMLNamespace>
+<Data><![CDATA[
+<transform sourceClass='Demo.FHIRStarter.RecordMap.Patient.Record' targetClass='HS.SDA3.Container' create='new' language='objectscript' >
+<annotation>Transformation to convert the patients.csv contents to the IRIS for Health SDA3</annotation>
+<group>
+<annotation>Patient data population</annotation>
+<assign value='"MRN"' property='target.Patient.PatientNumbers.(1).NumberType' action='set' />
+<assign value='source.Id' property='target.Patient.PatientNumbers.(1).Number' action='set' />
+<assign value='source.Id' property='target.Patient.Name.MRN' action='set' />
+<assign value='source.BIRTHDATE' property='target.Patient.Name.DOB' action='set' />
+<assign value='source.DEATHDATE' property='target.Patient.DeathTime' action='set' />
+<if condition='source.DEATHDATE &apos;= ""' >
+<true>
+<assign value='1' property='target.Patient.IsDead' action='set' />
+</true>
+</if>
+<assign value='"SSN"' property='target.Patient.PatientNumbers.(2).NumberType' action='set' />
+<assign value='source.SSN' property='target.Patient.PatientNumbers.(2).Number' action='set' />
+<assign value='"DRIVERS"' property='target.Patient.PatientNumbers.(3).NumberType' action='set' />
+<assign value='source.DRIVERS' property='target.Patient.PatientNumbers.(3).Number' action='set' />
+<assign value='"PASSPORT"' property='target.Patient.PatientNumbers.(4).NumberType' action='set' />
+<assign value='source.PASSPORT' property='target.Patient.PatientNumbers.(4).Number' action='set' />
+<assign value='source.PREFIX' property='target.Patient.Name.NamePrefix' action='set' />
+<assign value='source.FIRST' property='target.Patient.Name.GivenName' action='set' />
+<assign value='source.LAST' property='target.Patient.Name.FamilyName' action='set' />
+<assign value='source.SUFFIX' property='target.Patient.Name.NameSuffix' action='set' />
+<assign value='source.MAIDEN' property='target.Patient.MothersMaidenName' action='set' />
+<assign value='source.MARITAL' property='target.Patient.MaritalStatus.Code' action='set' />
+<assign value='source.RACE' property='target.Patient.Race.Code' action='set' />
+<assign value='source.ETHNICITY' property='target.Patient.EthnicGroup.Description' action='set' />
+<assign value='source.GENDER' property='target.Patient.Gender.Code' action='set' />
+<assign value='..Piece(source.BIRTHPLACE,"  ",1)' property='target.Patient.BirthPlace.City.Description' action='set' />
+<assign value='..Piece(source.BIRTHPLACE,"  ",2)' property='target.Patient.BirthPlace.State.Description' action='set' />
+<assign value='..Piece(source.BIRTHPLACE,"  ",3)' property='target.Patient.BirthPlace.Country.Code' action='set' />
+<assign value='source.ADDRESS' property='target.Patient.Addresses.(1).Street' action='set' />
+<assign value='source.CITY' property='target.Patient.Addresses.(1).City.Description' action='set' />
+<assign value='source.STATE' property='target.Patient.Addresses.(1).State.Description' action='set' />
+<assign value='source.COUNTY' property='target.Patient.Addresses.(1).County.Description' action='set' />
+<assign value='source.ZIP' property='target.Patient.Addresses.(1).Zip.Code' action='set' />
+<assign value='"US"' property='target.Patient.Addresses.(1).Country.Code' action='set' />
+<assign value='source.LAT' property='target.Patient.CustomPairs.(1).Value' action='set' />
+<assign value='"LAT"' property='target.Patient.CustomPairs.(1).Name' action='set' />
+<assign value='source.LON' property='target.Patient.CustomPairs.(2).Value' action='set' />
+<assign value='"LON"' property='target.Patient.CustomPairs.(2).Name' action='set' />
+<assign value='source.HEALTHCAREEXPENSES' property='target.Patient.CustomPairs.(3).Value' action='set' />
+<assign value='"HEALTHCAREEXPENSES"' property='target.Patient.CustomPairs.(3).Name' action='set' />
+<assign value='source.HEALTHCARECOVERAGE' property='target.Patient.CustomPairs.(4).Value' action='set' />
+<assign value='"HEALTHCARECOVERAGE"' property='target.Patient.CustomPairs.(4).Name' action='set' />
+</group>
+</transform>
+]]></Data>
+</XData>
+</Class>
+
+
+<Class name="Demo.FHIRStarter.DTL.XMLvDOCtoSDA">
+<Super>Ens.DataTransformDTL</Super>
+<TimeChanged>65813,70503.514392</TimeChanged>
+<TimeCreated>65813,66721.430142</TimeCreated>
+<DependsOn>EnsLib.EDI.XML.Document,HS.SDA3.Container</DependsOn>
+
+<Parameter name="IGNOREMISSINGSOURCE">
+<Default>1</Default>
+</Parameter>
+
+<Parameter name="REPORTERRORS">
+<Default>1</Default>
+</Parameter>
+
+<Parameter name="TREATEMPTYREPEATINGFIELDASNULL">
+<Default>0</Default>
+</Parameter>
+
+<XData name="DTL">
+<XMLNamespace>http://www.intersystems.com/dtl</XMLNamespace>
+<Data><![CDATA[
+<transform sourceClass='EnsLib.EDI.XML.Document' targetClass='HS.SDA3.Container' sourceDocType='ISCPATIENTtoFHIR:Chart' create='new' language='objectscript' >
+<annotation>Transformation to convert the ISCPATIENTtoFHIR XML to the IRIS for Health SDA3</annotation>
+<group expanded='false' >
+<annotation>Patient Actions</annotation>
+<assign value='source.{Patient.FirstName}' property='target.Patient.Name.GivenName' action='set' />
+<assign value='source.{Patient.FamilyName}' property='target.Patient.Name.FamilyName' action='set' />
+<assign value='source.{Patient.Email}' property='target.Patient.ContactInfo.EmailAddress' action='set' />
+<assign value='source.{Patient.ContactNo}' property='target.Patient.ContactInfo.MobilePhoneNumber' action='set' />
+<assign value='source.{Patient.MRN}' property='target.Patient.Name.MRN' action='set' />
+<assign value='"MRN"' property='target.Patient.PatientNumbers.(1).NumberType' action='set' />
+<assign value='source.{Patient.MRN}' property='target.Patient.PatientNumbers.(1).Number' action='set' />
+<assign value='source.{Patient.Address.City}' property='target.Patient.Addresses.(1).City.Description' action='set' />
+<if condition='..Length(source.{Patient.Address.State}) &gt; 2' >
+<true>
+<assign value='source.{Patient.Address.State}' property='target.Patient.Addresses.(1).State.Description' action='set' />
+</true>
+<false>
+<assign value='source.{Patient.Address.State}' property='target.Patient.Addresses.(1).State.Code' action='set' />
+</false>
+</if>
+<assign value='source.{Patient.Address.Zip}' property='target.Patient.Addresses.(1).Zip.Code' action='set' />
+<assign value='source.{Patient.DOB}' property='target.Patient.Name.DOB' action='set' />
+<assign value='source.{Patient.Gender.Code}' property='target.Patient.Gender.Code' action='set' />
+<assign value='source.{Patient.Gender.Description}' property='target.Patient.Gender.Description' action='set' />
+<assign value='source.{Patient.Encounter}' property='target.Patient.EncounterNumber' action='set' />
+</group>
+<group expanded='false' >
+<annotation>Encounters Actions</annotation>
+<foreach property='source.{Encounter()}' key='k1' >
+<assign value='source.{Encounter(k1).Type}' property='target.Encounters.(1).EncounterType' action='set' />
+<assign value='source.{Encounter(k1).Description}' property='target.Encounters.(1).VisitDescription' action='set' />
+<assign value='source.{Encounter(k1).From}' property='target.Encounters.(1).FromTime' action='set' />
+<assign value='source.{Encounter(k1).To}' property='target.Encounters.(1).ToTime' action='set' />
+<assign value='"Emergency Room"' property='target.Encounters.(1).HealthCareFacility.Description' action='set' />
+<assign value='"US"' property='target.Encounters.(1).HealthCareFacility.Organization.Address.Country.Code' action='set' />
+</foreach>
+</group>
+<group expanded='false' >
+<annotation>Diagnosis Actions</annotation>
+<foreach property='source.{Diagnosis()}' key='k2' >
+<assign value='source.{Diagnosis(k2).Type}' property='target.Diagnoses.(k2).DiagnosisType.Description' action='set' />
+<assign value='source.{Diagnosis(k2).Code.Value}' property='target.Diagnoses.(k2).DiagnosisType.Code' action='set' />
+<assign value='source.{Diagnosis(k2).Code.Type_oid}' property='target.Diagnoses.(k2).DiagnosisType.CodeSystemVersionId' action='set' />
+<assign value='source.{Diagnosis(k2).Code.Type}' property='target.Diagnoses.(k2).DiagnosisType.SDACodingStandard' action='set' />
+<assign value='source.{Diagnosis(k2).Description}' property='target.Diagnoses.(k2).Diagnosis.Description' action='set' />
+<assign value='source.{Diagnosis(k2).Code.Value}' property='target.Diagnoses.(k2).Diagnosis.Code' action='set' />
+<assign value='source.{Diagnosis(k2).Time}' property='target.Diagnoses.(k2).OnsetTime' action='set' />
+<assign value='source.{Patient.Encounter}' property='target.Diagnoses.(k2).EncounterNumber' action='set' />
+<assign value='source.{Diagnosis(k2).HospitalId}' property='target.Diagnoses.(k2).EnteredAt.Code' action='set' />
+<assign value='"Hospital ID"' property='target.Diagnoses.(k2).EnteredAt.Description' action='set' />
+</foreach>
+</group>
+<group expanded='false' >
+<annotation>Order Actions</annotation>
+<foreach property='source.{Order()}' key='k3' >
+<if condition='source.{Order(k3).Type} = 220' >
+<true>
+<assign value='source.{Order(k3).Code}' property='target.Procedures.(k3).Procedure.Code' action='set' />
+<assign value='source.{Order(k3).TypeDescription}' property='target.Procedures.(k3).Procedure.InternalReference' action='set' />
+<assign value='source.{Order(k3).OrderDescription}' property='target.Procedures.(k3).Procedure.Description' action='set' />
+<assign value='source.{Order(k3).Time}' property='target.Procedures.(k3).UpdatedOn' action='set' />
+<assign value='"Quantity"' property='target.Procedures.(k3).CustomPairs.(1).Name' action='set' />
+<assign value='source.{Order(k3).Quantity}' property='target.Procedures.(k3).CustomPairs.(1).Value' action='set' />
+</true>
+</if>
+</foreach>
+</group>
+<group expanded='false' >
+<annotation>Additional Actions</annotation>
+<assign value='"ISC"' property='target.AdditionalInfo.("EncompassingEncounterOrganization")' action='set' />
+<assign value='"VISIT12345"' property='target.AdditionalInfo.("EncompassingEncounterNumber")' action='set' />
+</group>
+<assign value='source.{Patient.Encounter}' property='target.Encounters.(1).EncounterNumber' action='set' />
+</transform>
+]]></Data>
+</XData>
+</Class>
+
+
+<Class name="Demo.FHIRStarter.RecordMap.Patient">
+<Description>
+RECORDMAP: Modified during compilation of RecordMap 'Demo.FHIRStarter.RecordMap.Patient'
+on 2021-03-25 at 15:07:25.495 [2021-03-25 20:07:25.495 UTC]
+by user jeff</Description>
+<Super>EnsLib.RecordMap.RecordMap</Super>
+<TimeChanged>65828,58045.496482</TimeChanged>
+<TimeCreated>65806,40807.679209</TimeCreated>
+
+<Method name="GetObject">
+<Description>
+Method to retrieve a record from a stream or device. This method will be generated based on the
+structure of the RecordMap. For testing purposes, a file name may be passed in the pStream argument.</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec><![CDATA[pStream:%IO.DeviceStream,*pObject:%RegisteredObject,pTimeout:%Numeric=-1,&pLookAhead:%String="",pLabelFound:%Boolean=0]]></FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	Try {
+		Set tStatus = $$$OK
+		Set pObject = $$$NULLOREF
+		If '$IsObject(pStream) {
+			Set tFilename = pStream
+			Set pStream = ##class(%IO.FileStream).%New()
+			Do pStream.Open(tFilename,,pTimeout,"UTF-8", .tStatus)
+			If $$$ISERR(tStatus) Quit
+		}
+		Set tObjectName = $parameter($this,"OBJECTNAME")
+		Set tObject = $classmethod(tObjectName,"%New")
+		If '$IsObject(tObject) {
+			Set tStatus = $$$ERROR($$$CannotCreateObject,tObjectName)
+			Quit
+		}
+		Set tObject.%Source = pStream.Name
+		Set tGetTopFields = $parameter(tObject,"INCLUDETOPFIELDS")
+		If pStream.AtEnd && (""=pLookAhead) {
+			Set tStatus = $$$ERROR($$$EnsRecordMapErrStreamAtEnd, pStream.Name)
+			Quit
+		}
+		Set pStream.CharEncoding = "UTF-8"
+
+		#; Parse incoming stream
+		Set tStatus = ..GetRecord(pStream, tObject, tGetTopFields, pTimeout, .pLookAhead, pLabelFound)
+		If $$$ISERR(tStatus) Quit
+	}
+	Catch ex {
+		Set tStatus = ex.AsStatus()
+	}
+	If $$$ISERR(tStatus) { Set pObject = $$$NULLOREF }
+	Else { Set pObject = tObject }
+	Quit tStatus
+]]></Implementation>
+</Method>
+
+<Method name="PutObject">
+<Description>
+Method to write a record to a stream or device. This method will be generated based on the
+structure of the RecordMap. For testing purposes, a file name may be passed in the pStream argument.</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec><![CDATA[pStream:%IO.DeviceStream,pObject:%RegisteredObject,pFlush:%Boolean=1,&pPadArray:%String]]></FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	Try {
+		Set tStatus = $$$OK
+		If '$IsObject(pStream) {
+			Set tFilename = pStream
+			Set pStream = ##class(%IO.FileStream).%New()
+			Do pStream.Open(tFilename,"WAE",,"UTF-8", .tStatus)
+			If $$$ISERR(tStatus) Quit
+		}
+		Set tHasTopFields = $parameter(pObject,"INCLUDETOPFIELDS")
+		Set pStream.CharEncoding = "UTF-8"
+
+		Set tStatus = ..PutRecord(pStream, pObject, tHasTopFields, .pPadArray)
+		If $$$ISERR(tStatus) Quit
+		If pFlush Do pStream.Flush(.tStatus)
+		If $$$ISERR(tStatus) Quit
+	}
+	Catch ex {
+		Set tStatus = ex.AsStatus()
+	}
+	Quit tStatus
+]]></Implementation>
+</Method>
+
+<Parameter name="OBJECTNAME">
+<Default>Demo.FHIRStarter.RecordMap.Patient.Record</Default>
+</Parameter>
+
+<Method name="GetRecord">
+<Description>
+Internal helper method to perform parse of incoming data</Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<FormalSpec><![CDATA[pStream:%IO.DeviceStream,pObject:%RegisteredObject,pGetTopFields:%Boolean,pTimeout:%Numeric,&pLookAhead:%String="",pLabelFound:%Boolean=0]]></FormalSpec>
+<Private>1</Private>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	Set tStatus = $$$OK
+	If pLabelFound { Set tRecLabel = "" } 
+	Else { Set tRecLabel = "" } 
+	Set tStatus = ..chunkRecord(pStream, .tRecordData, .tCharCount, "", pTimeout, $char(10), tRecLabel, .pLookAhead, "")
+	If $$$ISERR(tStatus) Quit tStatus
+	Set tMaxLocal = $$$MaxLocalLength
+	Set tRecordData("charcount") = +$get(tCharCount)
+	Set tCurrChunk = 1
+	Set tTopPiece = 1
+	Set tCurrSep = 1
+	Set tStrings = 1
+	Set tCurrString = ""
+	Set tSeps = $listbuild($char(44))
+	If '$data(tRecordData(tCurrChunk, "block")) {
+		Set tCurrString = $piece(tRecordData(tCurrChunk), $char(44), tTopPiece)
+	}
+	Else {
+		Set tCurrString = tRecordData(tCurrChunk)
+		Set tCurrPiece = 1
+	}
+	Do ..checkMerge(.tCurrChunk, .tRecordData, .tCurrString, $char(44), .tTopPiece)
+	If pGetTopFields {
+		Set pObject.Id = tCurrString
+	}
+	If '$data(tRecordData(tCurrChunk, "block")) {
+		Set tCurrString = $piece(tRecordData(tCurrChunk), $char(44), tTopPiece)
+	}
+	Do ..checkMerge(.tCurrChunk, .tRecordData, .tCurrString, $char(44), .tTopPiece)
+	If pGetTopFields {
+		Set pObject.BIRTHDATE = tCurrString
+	}
+	If '$data(tRecordData(tCurrChunk, "block")) {
+		Set tCurrString = $piece(tRecordData(tCurrChunk), $char(44), tTopPiece)
+	}
+	Do ..checkMerge(.tCurrChunk, .tRecordData, .tCurrString, $char(44), .tTopPiece)
+	If pGetTopFields {
+		Set pObject.DEATHDATE = tCurrString
+	}
+	If '$data(tRecordData(tCurrChunk, "block")) {
+		Set tCurrString = $piece(tRecordData(tCurrChunk), $char(44), tTopPiece)
+	}
+	Do ..checkMerge(.tCurrChunk, .tRecordData, .tCurrString, $char(44), .tTopPiece)
+	If pGetTopFields {
+		Set pObject.SSN = tCurrString
+	}
+	If '$data(tRecordData(tCurrChunk, "block")) {
+		Set tCurrString = $piece(tRecordData(tCurrChunk), $char(44), tTopPiece)
+	}
+	Do ..checkMerge(.tCurrChunk, .tRecordData, .tCurrString, $char(44), .tTopPiece)
+	If pGetTopFields {
+		Set pObject.DRIVERS = tCurrString
+	}
+	If '$data(tRecordData(tCurrChunk, "block")) {
+		Set tCurrString = $piece(tRecordData(tCurrChunk), $char(44), tTopPiece)
+	}
+	Do ..checkMerge(.tCurrChunk, .tRecordData, .tCurrString, $char(44), .tTopPiece)
+	If pGetTopFields {
+		Set pObject.PASSPORT = tCurrString
+	}
+	If '$data(tRecordData(tCurrChunk, "block")) {
+		Set tCurrString = $piece(tRecordData(tCurrChunk), $char(44), tTopPiece)
+	}
+	Do ..checkMerge(.tCurrChunk, .tRecordData, .tCurrString, $char(44), .tTopPiece)
+	If pGetTopFields {
+		Set pObject.PREFIX = tCurrString
+	}
+	If '$data(tRecordData(tCurrChunk, "block")) {
+		Set tCurrString = $piece(tRecordData(tCurrChunk), $char(44), tTopPiece)
+	}
+	Do ..checkMerge(.tCurrChunk, .tRecordData, .tCurrString, $char(44), .tTopPiece)
+	If pGetTopFields {
+		Set pObject.FIRST = tCurrString
+	}
+	If '$data(tRecordData(tCurrChunk, "block")) {
+		Set tCurrString = $piece(tRecordData(tCurrChunk), $char(44), tTopPiece)
+	}
+	Do ..checkMerge(.tCurrChunk, .tRecordData, .tCurrString, $char(44), .tTopPiece)
+	If pGetTopFields {
+		Set pObject.LAST = tCurrString
+	}
+	If '$data(tRecordData(tCurrChunk, "block")) {
+		Set tCurrString = $piece(tRecordData(tCurrChunk), $char(44), tTopPiece)
+	}
+	Do ..checkMerge(.tCurrChunk, .tRecordData, .tCurrString, $char(44), .tTopPiece)
+	If pGetTopFields {
+		Set pObject.SUFFIX = tCurrString
+	}
+	If '$data(tRecordData(tCurrChunk, "block")) {
+		Set tCurrString = $piece(tRecordData(tCurrChunk), $char(44), tTopPiece)
+	}
+	Do ..checkMerge(.tCurrChunk, .tRecordData, .tCurrString, $char(44), .tTopPiece)
+	If pGetTopFields {
+		Set pObject.MAIDEN = tCurrString
+	}
+	If '$data(tRecordData(tCurrChunk, "block")) {
+		Set tCurrString = $piece(tRecordData(tCurrChunk), $char(44), tTopPiece)
+	}
+	Do ..checkMerge(.tCurrChunk, .tRecordData, .tCurrString, $char(44), .tTopPiece)
+	If pGetTopFields {
+		Set pObject.MARITAL = tCurrString
+	}
+	If '$data(tRecordData(tCurrChunk, "block")) {
+		Set tCurrString = $piece(tRecordData(tCurrChunk), $char(44), tTopPiece)
+	}
+	Do ..checkMerge(.tCurrChunk, .tRecordData, .tCurrString, $char(44), .tTopPiece)
+	If pGetTopFields {
+		Set pObject.RACE = tCurrString
+	}
+	If '$data(tRecordData(tCurrChunk, "block")) {
+		Set tCurrString = $piece(tRecordData(tCurrChunk), $char(44), tTopPiece)
+	}
+	Do ..checkMerge(.tCurrChunk, .tRecordData, .tCurrString, $char(44), .tTopPiece)
+	If pGetTopFields {
+		Set pObject.ETHNICITY = tCurrString
+	}
+	If '$data(tRecordData(tCurrChunk, "block")) {
+		Set tCurrString = $piece(tRecordData(tCurrChunk), $char(44), tTopPiece)
+	}
+	Do ..checkMerge(.tCurrChunk, .tRecordData, .tCurrString, $char(44), .tTopPiece)
+	If pGetTopFields {
+		Set pObject.GENDER = tCurrString
+	}
+	If '$data(tRecordData(tCurrChunk, "block")) {
+		Set tCurrString = $piece(tRecordData(tCurrChunk), $char(44), tTopPiece)
+	}
+	Do ..checkMerge(.tCurrChunk, .tRecordData, .tCurrString, $char(44), .tTopPiece)
+	If pGetTopFields {
+		Set pObject.BIRTHPLACE = tCurrString
+	}
+	If '$data(tRecordData(tCurrChunk, "block")) {
+		Set tCurrString = $piece(tRecordData(tCurrChunk), $char(44), tTopPiece)
+	}
+	Do ..checkMerge(.tCurrChunk, .tRecordData, .tCurrString, $char(44), .tTopPiece)
+	If pGetTopFields {
+		Set pObject.ADDRESS = tCurrString
+	}
+	If '$data(tRecordData(tCurrChunk, "block")) {
+		Set tCurrString = $piece(tRecordData(tCurrChunk), $char(44), tTopPiece)
+	}
+	Do ..checkMerge(.tCurrChunk, .tRecordData, .tCurrString, $char(44), .tTopPiece)
+	If pGetTopFields {
+		Set pObject.CITY = tCurrString
+	}
+	If '$data(tRecordData(tCurrChunk, "block")) {
+		Set tCurrString = $piece(tRecordData(tCurrChunk), $char(44), tTopPiece)
+	}
+	Do ..checkMerge(.tCurrChunk, .tRecordData, .tCurrString, $char(44), .tTopPiece)
+	If pGetTopFields {
+		Set pObject.STATE = tCurrString
+	}
+	If '$data(tRecordData(tCurrChunk, "block")) {
+		Set tCurrString = $piece(tRecordData(tCurrChunk), $char(44), tTopPiece)
+	}
+	Do ..checkMerge(.tCurrChunk, .tRecordData, .tCurrString, $char(44), .tTopPiece)
+	If pGetTopFields {
+		Set pObject.COUNTY = tCurrString
+	}
+	If '$data(tRecordData(tCurrChunk, "block")) {
+		Set tCurrString = $piece(tRecordData(tCurrChunk), $char(44), tTopPiece)
+	}
+	Do ..checkMerge(.tCurrChunk, .tRecordData, .tCurrString, $char(44), .tTopPiece)
+	If pGetTopFields {
+		Set pObject.ZIP =  pObject.ZIPDisplayToLogical(tCurrString)
+	}
+	If '$data(tRecordData(tCurrChunk, "block")) {
+		Set tCurrString = $piece(tRecordData(tCurrChunk), $char(44), tTopPiece)
+	}
+	Do ..checkMerge(.tCurrChunk, .tRecordData, .tCurrString, $char(44), .tTopPiece)
+	If pGetTopFields {
+		Set pObject.LAT =  pObject.LATDisplayToLogical(tCurrString)
+	}
+	If '$data(tRecordData(tCurrChunk, "block")) {
+		Set tCurrString = $piece(tRecordData(tCurrChunk), $char(44), tTopPiece)
+	}
+	Do ..checkMerge(.tCurrChunk, .tRecordData, .tCurrString, $char(44), .tTopPiece)
+	If pGetTopFields {
+		Set pObject.LON =  pObject.LONDisplayToLogical(tCurrString)
+	}
+	If '$data(tRecordData(tCurrChunk, "block")) {
+		Set tCurrString = $piece(tRecordData(tCurrChunk), $char(44), tTopPiece)
+	}
+	Do ..checkMerge(.tCurrChunk, .tRecordData, .tCurrString, $char(44), .tTopPiece)
+	If pGetTopFields {
+		Set pObject.HEALTHCAREEXPENSES =  pObject.HEALTHCAREEXPENSESDisplayToLogical(tCurrString)
+	}
+	If '$data(tRecordData(tCurrChunk, "block")) {
+		Set tCurrString = $piece(tRecordData(tCurrChunk), $char(44), tTopPiece)
+	}
+	Do ..checkMerge(.tCurrChunk, .tRecordData, .tCurrString, $char(44), .tTopPiece)
+	If pGetTopFields {
+		Set pObject.HEALTHCARECOVERAGE =  pObject.HEALTHCARECOVERAGEDisplayToLogical(tCurrString)
+	}
+	Quit tStatus
+]]></Implementation>
+</Method>
+
+<Method name="PutRecord">
+<Description>
+Internal helper method to output object to a stream</Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<FormalSpec><![CDATA[pStream:%IO.DeviceStream,pObject:%RegisteredObject,pHasTopFields:%Boolean,&pPadArray:%String]]></FormalSpec>
+<Private>1</Private>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	Set tStatus = $$$OK
+	Set tmpStream=##class(%Stream.TmpBinary).%New()
+	Do tmpStream.Write($select(pHasTopFields: pObject.Id,1: ""))
+	Do tmpStream.Write($char(44) _ $select(pHasTopFields: pObject.BIRTHDATE,1: ""))
+	Do tmpStream.Write($char(44) _ $select(pHasTopFields: pObject.DEATHDATE,1: ""))
+	Do tmpStream.Write($char(44) _ $select(pHasTopFields: pObject.SSN,1: ""))
+	Do tmpStream.Write($char(44) _ $select(pHasTopFields: pObject.DRIVERS,1: ""))
+	Do tmpStream.Write($char(44) _ $select(pHasTopFields: pObject.PASSPORT,1: ""))
+	Do tmpStream.Write($char(44) _ $select(pHasTopFields: pObject.PREFIX,1: ""))
+	Do tmpStream.Write($char(44) _ $select(pHasTopFields: pObject.FIRST,1: ""))
+	Do tmpStream.Write($char(44) _ $select(pHasTopFields: pObject.LAST,1: ""))
+	Do tmpStream.Write($char(44) _ $select(pHasTopFields: pObject.SUFFIX,1: ""))
+	Do tmpStream.Write($char(44) _ $select(pHasTopFields: pObject.MAIDEN,1: ""))
+	Do tmpStream.Write($char(44) _ $select(pHasTopFields: pObject.MARITAL,1: ""))
+	Do tmpStream.Write($char(44) _ $select(pHasTopFields: pObject.RACE,1: ""))
+	Do tmpStream.Write($char(44) _ $select(pHasTopFields: pObject.ETHNICITY,1: ""))
+	Do tmpStream.Write($char(44) _ $select(pHasTopFields: pObject.GENDER,1: ""))
+	Do tmpStream.Write($char(44) _ $select(pHasTopFields: pObject.BIRTHPLACE,1: ""))
+	Do tmpStream.Write($char(44) _ $select(pHasTopFields: pObject.ADDRESS,1: ""))
+	Do tmpStream.Write($char(44) _ $select(pHasTopFields: pObject.CITY,1: ""))
+	Do tmpStream.Write($char(44) _ $select(pHasTopFields: pObject.STATE,1: ""))
+	Do tmpStream.Write($char(44) _ $select(pHasTopFields: pObject.COUNTY,1: ""))
+	Do tmpStream.Write($char(44) _ $select(pHasTopFields: pObject.ZIPLogicalToDisplay(pObject.ZIP),1: ""))
+	Do tmpStream.Write($char(44) _ $select(pHasTopFields: pObject.LATLogicalToDisplay(pObject.LAT),1: ""))
+	Do tmpStream.Write($char(44) _ $select(pHasTopFields: pObject.LONLogicalToDisplay(pObject.LON),1: ""))
+	Do tmpStream.Write($char(44) _ $select(pHasTopFields: pObject.HEALTHCAREEXPENSESLogicalToDisplay(pObject.HEALTHCAREEXPENSES),1: ""))
+	Do tmpStream.Write($char(44) _ $select(pHasTopFields: pObject.HEALTHCARECOVERAGELogicalToDisplay(pObject.HEALTHCARECOVERAGE),1: ""))
+	Set tStatus = tmpStream.Write($char(10))
+	If $$$ISERR(tStatus) Quit tStatus
+	Do pStream.CopyFrom(tmpStream,,0,.tStatus)
+	Quit tStatus
+]]></Implementation>
+</Method>
+
+<Method name="GetGeneratedClasses">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>*pClasses:%String</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	Kill pClasses
+	Set pClasses("Demo.FHIRStarter.RecordMap.Patient.Record")=""
+	Set pClasses($classname())=""
+	Quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="getIdentifier">
+<ClassMethod>1</ClassMethod>
+<CodeMode>expression</CodeMode>
+<FormalSpec/>
+<ReturnType>%String</ReturnType>
+<Implementation><![CDATA[""
+]]></Implementation>
+</Method>
+
+<Method name="getType">
+<ClassMethod>1</ClassMethod>
+<CodeMode>expression</CodeMode>
+<FormalSpec/>
+<ReturnType>EnsLib.RecordMap.Model.DataType.RecordType</ReturnType>
+<Implementation><![CDATA["delimited"
+]]></Implementation>
+</Method>
+
+<XData name="RecordMap">
+<XMLNamespace>http://www.intersystems.com/Ensemble/RecordMap</XMLNamespace>
+<Data><![CDATA[
+<Record xmlns="http://www.intersystems.com/Ensemble/RecordMap" name="Demo.FHIRStarter.RecordMap.Patient" type="delimited" char_encoding="UTF-8" targetClassname="Demo.FHIRStarter.RecordMap.Patient.Record" recordTerminator="\x0a">
+  <Separators>
+    <Separator>,</Separator>
+  </Separators>
+  <Field name="Id" datatype="%String" sqlColumn="2">
+  </Field>
+  <Field name="BIRTHDATE" required="0" ignored="0" datatype="%String" sqlColumn="3" repeating="0">
+  </Field>
+  <Field name="DEATHDATE" required="0" ignored="0" datatype="%String" sqlColumn="4" repeating="0">
+  </Field>
+  <Field name="SSN" datatype="%String" sqlColumn="5">
+  </Field>
+  <Field name="DRIVERS" datatype="%String" sqlColumn="6">
+  </Field>
+  <Field name="PASSPORT" datatype="%String" sqlColumn="7">
+  </Field>
+  <Field name="PREFIX" datatype="%String" sqlColumn="8">
+  </Field>
+  <Field name="FIRST" datatype="%String" sqlColumn="9">
+  </Field>
+  <Field name="LAST" datatype="%String" sqlColumn="10">
+  </Field>
+  <Field name="SUFFIX" datatype="%String" sqlColumn="11">
+  </Field>
+  <Field name="MAIDEN" datatype="%String" sqlColumn="12">
+  </Field>
+  <Field name="MARITAL" datatype="%String" sqlColumn="13">
+  </Field>
+  <Field name="RACE" datatype="%String" sqlColumn="14">
+  </Field>
+  <Field name="ETHNICITY" datatype="%String" sqlColumn="15">
+  </Field>
+  <Field name="GENDER" datatype="%String" sqlColumn="16">
+  </Field>
+  <Field name="BIRTHPLACE" required="0" ignored="0" datatype="%String" params="MAXLEN = 150" sqlColumn="17" repeating="0">
+  </Field>
+  <Field name="ADDRESS" datatype="%String" sqlColumn="18">
+  </Field>
+  <Field name="CITY" datatype="%String" sqlColumn="19">
+  </Field>
+  <Field name="STATE" datatype="%String" sqlColumn="20">
+  </Field>
+  <Field name="COUNTY" datatype="%String" sqlColumn="21">
+  </Field>
+  <Field name="ZIP" required="0" ignored="0" datatype="%Integer" sqlColumn="22" repeating="0">
+  </Field>
+  <Field name="LAT" required="0" ignored="0" datatype="%Decimal" params="SCALE=3" sqlColumn="23" repeating="0">
+  </Field>
+  <Field name="LON" required="0" ignored="0" datatype="%Decimal" params="SCALE=3" sqlColumn="24" repeating="0">
+  </Field>
+  <Field name="HEALTHCAREEXPENSES" required="0" ignored="0" datatype="%Decimal" params="SCALE=2" sqlColumn="25" repeating="0">
+  </Field>
+  <Field name="HEALTHCARECOVERAGE" required="0" ignored="0" datatype="%Decimal" params="SCALE=2" sqlColumn="26" repeating="0">
+  </Field>
+</Record>
+]]></Data>
+</XData>
+</Class>
+
+
+<Class name="Demo.FHIRStarter.RecordMap.Patient.Record">
+<Description>
+RECORDMAP: Generated from RecordMap 'Demo.FHIRStarter.RecordMap.Patient'
+on 2021-03-25 at 15:07:25.436 [2021-03-25 20:07:25.436 UTC]
+by user jeff</Description>
+<ProcedureBlock>1</ProcedureBlock>
+<Super>%Persistent,%XML.Adaptor,Ens.Request,EnsLib.RecordMap.Base</Super>
+<TimeChanged>65828,58045.533932</TimeChanged>
+<TimeCreated>65828,58045.43691</TimeCreated>
+<Inheritance>right</Inheritance>
+
+<Parameter name="INCLUDETOPFIELDS">
+<Default>1</Default>
+</Parameter>
+
+<Property name="Id">
+<Type>%String</Type>
+<SqlColumnNumber>2</SqlColumnNumber>
+</Property>
+
+<Property name="BIRTHDATE">
+<Type>%String</Type>
+<SqlColumnNumber>3</SqlColumnNumber>
+</Property>
+
+<Property name="DEATHDATE">
+<Type>%String</Type>
+<SqlColumnNumber>4</SqlColumnNumber>
+</Property>
+
+<Property name="SSN">
+<Type>%String</Type>
+<SqlColumnNumber>5</SqlColumnNumber>
+</Property>
+
+<Property name="DRIVERS">
+<Type>%String</Type>
+<SqlColumnNumber>6</SqlColumnNumber>
+</Property>
+
+<Property name="PASSPORT">
+<Type>%String</Type>
+<SqlColumnNumber>7</SqlColumnNumber>
+</Property>
+
+<Property name="PREFIX">
+<Type>%String</Type>
+<SqlColumnNumber>8</SqlColumnNumber>
+</Property>
+
+<Property name="FIRST">
+<Type>%String</Type>
+<SqlColumnNumber>9</SqlColumnNumber>
+</Property>
+
+<Property name="LAST">
+<Type>%String</Type>
+<SqlColumnNumber>10</SqlColumnNumber>
+</Property>
+
+<Property name="SUFFIX">
+<Type>%String</Type>
+<SqlColumnNumber>11</SqlColumnNumber>
+</Property>
+
+<Property name="MAIDEN">
+<Type>%String</Type>
+<SqlColumnNumber>12</SqlColumnNumber>
+</Property>
+
+<Property name="MARITAL">
+<Type>%String</Type>
+<SqlColumnNumber>13</SqlColumnNumber>
+</Property>
+
+<Property name="RACE">
+<Type>%String</Type>
+<SqlColumnNumber>14</SqlColumnNumber>
+</Property>
+
+<Property name="ETHNICITY">
+<Type>%String</Type>
+<SqlColumnNumber>15</SqlColumnNumber>
+</Property>
+
+<Property name="GENDER">
+<Type>%String</Type>
+<SqlColumnNumber>16</SqlColumnNumber>
+</Property>
+
+<Property name="BIRTHPLACE">
+<Type>%String</Type>
+<SqlColumnNumber>17</SqlColumnNumber>
+<Parameter name="MAXLEN" value="150"/>
+</Property>
+
+<Property name="ADDRESS">
+<Type>%String</Type>
+<SqlColumnNumber>18</SqlColumnNumber>
+</Property>
+
+<Property name="CITY">
+<Type>%String</Type>
+<SqlColumnNumber>19</SqlColumnNumber>
+</Property>
+
+<Property name="STATE">
+<Type>%String</Type>
+<SqlColumnNumber>20</SqlColumnNumber>
+</Property>
+
+<Property name="COUNTY">
+<Type>%String</Type>
+<SqlColumnNumber>21</SqlColumnNumber>
+</Property>
+
+<Property name="ZIP">
+<Type>%Integer</Type>
+<SqlColumnNumber>22</SqlColumnNumber>
+</Property>
+
+<Property name="LAT">
+<Type>%Decimal</Type>
+<SqlColumnNumber>23</SqlColumnNumber>
+<Parameter name="SCALE" value="3"/>
+</Property>
+
+<Property name="LON">
+<Type>%Decimal</Type>
+<SqlColumnNumber>24</SqlColumnNumber>
+<Parameter name="SCALE" value="3"/>
+</Property>
+
+<Property name="HEALTHCAREEXPENSES">
+<Type>%Decimal</Type>
+<SqlColumnNumber>25</SqlColumnNumber>
+<Parameter name="SCALE" value="2"/>
+</Property>
+
+<Property name="HEALTHCARECOVERAGE">
+<Type>%Decimal</Type>
+<SqlColumnNumber>26</SqlColumnNumber>
+<Parameter name="SCALE" value="2"/>
+</Property>
+
+<Parameter name="RECORDMAPGENERATED">
+<Default>1</Default>
+</Parameter>
+
+<Storage name="Default">
+<Type>%Storage.Persistent</Type>
+<DataLocation>^Demo.FHIRStarter.ReC35E.RecordD</DataLocation>
+<DefaultData>RecordDefaultData</DefaultData>
+<IdLocation>^Demo.FHIRStarter.ReC35E.RecordD</IdLocation>
+<IndexLocation>^Demo.FHIRStarter.ReC35E.RecordI</IndexLocation>
+<StreamLocation>^Demo.FHIRStarter.ReC35E.RecordS</StreamLocation>
+<ExtentSize>2000000</ExtentSize>
+<Data name="RecordDefaultData">
+<Structure>listnode</Structure>
+<Subscript/>
+<Value name="1">
+<Value>%%CLASSNAME</Value>
+</Value>
+<Value name="2">
+<Value>Id</Value>
+</Value>
+<Value name="3">
+<Value>%Source</Value>
+</Value>
+<Value name="4">
+<Value>DEATHDATE</Value>
+</Value>
+<Value name="5">
+<Value>SSN</Value>
+</Value>
+<Value name="6">
+<Value>DRIVERS</Value>
+</Value>
+<Value name="7">
+<Value>PASSPORT</Value>
+</Value>
+<Value name="8">
+<Value>PREFIX</Value>
+</Value>
+<Value name="9">
+<Value>FIRST</Value>
+</Value>
+<Value name="10">
+<Value>LAST</Value>
+</Value>
+<Value name="11">
+<Value>SUFFIX</Value>
+</Value>
+<Value name="12">
+<Value>MAIDEN</Value>
+</Value>
+<Value name="13">
+<Value>MARITAL</Value>
+</Value>
+<Value name="14">
+<Value>RACE</Value>
+</Value>
+<Value name="15">
+<Value>ETHNICITY</Value>
+</Value>
+<Value name="16">
+<Value>GENDER</Value>
+</Value>
+<Value name="17">
+<Value>BIRTHPLACE</Value>
+</Value>
+<Value name="18">
+<Value>ADDRESS</Value>
+</Value>
+<Value name="19">
+<Value>CITY</Value>
+</Value>
+<Value name="20">
+<Value>STATE</Value>
+</Value>
+<Value name="21">
+<Value>COUNTY</Value>
+</Value>
+<Value name="22">
+<Value>ZIP</Value>
+</Value>
+<Value name="23">
+<Value>LAT</Value>
+</Value>
+<Value name="24">
+<Value>LON</Value>
+</Value>
+<Value name="25">
+<Value>HEALTHCAREEXPENSES</Value>
+</Value>
+<Value name="26">
+<Value>HEALTHCARECOVERAGE</Value>
+</Value>
+<Value name="27">
+<Value>BIRTHDATE</Value>
+</Value>
+</Data>
+</Storage>
+</Class>
+
+
+<Class name="Demo.FHIRStarter.Util.FunctionSet">
+<Description>
+Simple utility that takes EnsLib.HL7.Message object and returns extracted SDA3.Container stream</Description>
+<TimeChanged>65406,13542.127148</TimeChanged>
+<TimeCreated>65406,9609.689379</TimeCreated>
+
+<Method name="GetSDAFromHL7">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>pRequest:EnsLib.HL7.Message</FormalSpec>
+<ReturnType>%Stream.GlobalCharacter</ReturnType>
+<Implementation><![CDATA[
+	set status=##class(HS.Gateway.HL7.HL7ToSDA3).GetSDA(pRequest,.sdaStream)
+	quit sdaStream
+]]></Implementation>
+</Method>
+</Class>
+
+
+<Project name="EnsExportProduction_2021-03-25 16-21-00_981-4" LastModified="2021-03-25 16:21:45.189935">
+  <ProjectDescription>Studio Project generated from Production 'SUREFHIRPKG.FoundationProduction' at 2021-03-25 20:21:00.981 UTC</ProjectDescription>
+  <Items>
+    <ProjectItem name="Demo.FHIRPlace.BPL.BundleFlip" type="CLS"></ProjectItem>
+    <ProjectItem name="Demo.FHIRPlace.BPL.FHIRDataCollector" type="CLS"></ProjectItem>
+    <ProjectItem name="Demo.FHIRPlace.BPL.PatientDelete" type="CLS"></ProjectItem>
+    <ProjectItem name="Demo.FHIRPlace.DTL.BuildFHIRDeleteBundle" type="CLS"></ProjectItem>
+    <ProjectItem name="Demo.FHIRPlace.DTL.BuildFHIRInteropRequest.BundleFlip" type="CLS"></ProjectItem>
+    <ProjectItem name="Demo.FHIRPlace.DTL.BuildFHIRInteropRequest.ExternalPatientGetEverything" type="CLS"></ProjectItem>
+    <ProjectItem name="Demo.FHIRPlace.DTL.BuildFHIRInteropRequest.ExternalPatientSearch" type="CLS"></ProjectItem>
+    <ProjectItem name="Demo.FHIRPlace.DTL.BuildFHIRInteropRequest.InternalPatientGetEverything" type="CLS"></ProjectItem>
+    <ProjectItem name="Demo.FHIRPlace.DTL.BuildFHIRInteropRequest.InternalPatientSearch" type="CLS"></ProjectItem>
+    <ProjectItem name="Demo.FHIRPlace.DTL.BuildFHIRInteropRequest.PatientDelete" type="CLS"></ProjectItem>
+    <ProjectItem name="Demo.FHIRPlace.DTL.BuildFHIRInteropRequest.PatientGetEverythingSubTransform" type="CLS"></ProjectItem>
+    <ProjectItem name="Demo.FHIRPlace.DTL.BuildFHIRInteropRequest.PatientSearchSubTransform" type="CLS"></ProjectItem>
+    <ProjectItem name="Demo.FHIRPlace.DTL.FHIRResponseExtract.GetPatientResourceId" type="CLS"></ProjectItem>
+    <ProjectItem name="Demo.FHIRPlace.DTL.FHIRResponseExtract.QuickStreamToJSON" type="CLS"></ProjectItem>
+    <ProjectItem name="Demo.FHIRPlace.DTL.HL7v2.ExtractMRN" type="CLS"></ProjectItem>
+    <ProjectItem name="Demo.FHIRPlace.RecordMap.FHIRPatientId.Record" type="CLS"></ProjectItem>
+    <ProjectItem name="Demo.FHIRPlace.RecordMap.MRN" type="CLS"></ProjectItem>
+    <ProjectItem name="Demo.FHIRPlace.RecordMap.MRN.Record" type="CLS"></ProjectItem>
+    <ProjectItem name="Demo.FHIRPlace.RuleSet.HL7v2.MRNExtractor" type="CLS"></ProjectItem>
+    <ProjectItem name="Demo.FHIRServer.Tools.BundleConverter" type="CLS"></ProjectItem>
+    <ProjectItem name="Demo.FHIRStarter.BPL.LegacyDataConverter" type="CLS"></ProjectItem>
+    <ProjectItem name="Demo.FHIRStarter.DTL.PatientCSVtoSDA" type="CLS"></ProjectItem>
+    <ProjectItem name="Demo.FHIRStarter.DTL.XMLvDOCtoSDA" type="CLS"></ProjectItem>
+    <ProjectItem name="Demo.FHIRStarter.RecordMap.Patient" type="CLS"></ProjectItem>
+    <ProjectItem name="Demo.FHIRStarter.RecordMap.Patient.Record" type="CLS"></ProjectItem>
+    <ProjectItem name="Demo.FHIRStarter.Util.FunctionSet" type="CLS"></ProjectItem>
+    <ProjectItem name="SUREFHIRPKG.FoundationProduction" type="CLS"></ProjectItem>
+    <ProjectItem name="Ens.Config.DefaultSettings.ESD" type="ESD"></ProjectItem>
+    <ProjectItem name="EnsExportNotes.EnsExportProduction_2021-03-25 16-21-00_981-4.PTD" type="PTD"></ProjectItem>
+  </Items>
+</Project>
+
+
+<Class name="SUREFHIRPKG.FoundationProduction">
+<ProcedureBlock>0</ProcedureBlock>
+<Super>Ens.Production</Super>
+<TimeChanged>65828,58509.847775</TimeChanged>
+<TimeCreated>65828,53992.695948</TimeCreated>
+
+<XData name="ProductionDefinition">
+<Data><![CDATA[
+<Production Name="TESTPKG.FoundationProduction" TestingEnabled="true" LogGeneralTraceEvents="true">
+  <Description></Description>
+  <ActorPoolSize>0</ActorPoolSize>
+  <Setting Target="Adapter" Name="ShutdownTimeout">30</Setting>
+  <Item Name="HS.Util.Trace.Operations" Category="" ClassName="HS.Util.Trace.Operations" PoolSize="1" Enabled="true" Foreground="false" Comment="" LogTraceEvents="false" Schedule="">
+  </Item>
+  <Item Name="Data.BPL.PatientRecordCollector" Category="FHIRPlace" ClassName="Demo.FHIRPlace.BPL.FHIRDataCollector" PoolSize="1" Enabled="true" Foreground="false" Comment="This component sends out two FHIR Requests to two separate endpoints and saves the resulting bundle to the local FHIR Resource Repository." LogTraceEvents="true" Schedule="">
+  </Item>
+  <Item Name="Data.BPL.BundleFlip" Category="FHIRPlace" ClassName="Demo.FHIRPlace.BPL.BundleFlip" PoolSize="1" Enabled="true" Foreground="false" Comment="" LogTraceEvents="true" Schedule="">
+    <Setting Target="Host" Name="LocalFHIREndpoint">/fhirplace/r4</Setting>
+  </Item>
+  <Item Name="Data.BPL.PatientDelete" Category="FHIRPlace" ClassName="Demo.FHIRPlace.BPL.PatientDelete" PoolSize="1" Enabled="true" Foreground="false" Comment="" LogTraceEvents="false" Schedule="">
+    <Setting Target="Host" Name="LocalFHIREndpoint">/fhirplace/r4</Setting>
+  </Item>
+  <Item Name="Data.HL7v2MRNExtract.Input" Category="FHIRPlace" ClassName="EnsLib.HL7.Service.FileService" PoolSize="1" Enabled="true" Foreground="false" Comment="" LogTraceEvents="false" Schedule="">
+    <Setting Target="Host" Name="MessageSchemaCategory">2.3.1</Setting>
+    <Setting Target="Adapter" Name="FileSpec">*HL7v2*</Setting>
+    <Setting Target="Host" Name="TargetConfigNames">Data.HL7v2.MRNExtractor</Setting>
+  </Item>
+  <Item Name="Data.RecordMap.MRN.Input" Category="FHIRPlace" ClassName="EnsLib.RecordMap.Service.FileService" PoolSize="1" Enabled="true" Foreground="false" Comment="" LogTraceEvents="false" Schedule="">
+    <Setting Target="Host" Name="RecordMap">Demo.FHIRPlace.RecordMap.MRN</Setting>
+    <Setting Target="Host" Name="TargetConfigNames">Data.BPL.PatientRecordCollector</Setting>
+    <Setting Target="Adapter" Name="FileSpec">*MRN*</Setting>
+  </Item>
+  <Item Name="FHIR.Interop.Service" Category="" ClassName="HS.FHIRServer.Interop.Service" PoolSize="0" Enabled="true" Foreground="false" Comment="" LogTraceEvents="false" Schedule="">
+    <Setting Target="Host" Name="TargetConfigName">FHIR.Local.RequestHandler</Setting>
+  </Item>
+  <Item Name="FHIR.Local.RequestHandler" Category="FHIRPlace,FHIRStarter" ClassName="HS.FHIRServer.Interop.Operation" PoolSize="1" Enabled="true" Foreground="false" Comment="" LogTraceEvents="false" Schedule="">
+    <Setting Target="Host" Name="ArchiveIO">1</Setting>
+    <Setting Target="Host" Name="TraceOperations">*FULL*</Setting>
+  </Item>
+  <Item Name="FHIR.EMR.RequestSender" Category="FHIRPlace" ClassName="HS.FHIRServer.Interop.HTTPOperation" PoolSize="1" Enabled="true" Foreground="false" Comment="" LogTraceEvents="false" Schedule="">
+    <Setting Target="Host" Name="ArchiveIO">1</Setting>
+    <Setting Target="Host" Name="ServiceName">EMREmulatorFHIRR4</Setting>
+    <Setting Target="Host" Name="TraceOperations">*FULL*</Setting>
+  </Item>
+  <Item Name="Data.HL7v2.MRNExtractor" Category="FHIRPlace" ClassName="EnsLib.HL7.MsgRouter.RoutingEngine" PoolSize="1" Enabled="true" Foreground="false" Comment="" LogTraceEvents="false" Schedule="">
+    <Setting Target="Host" Name="BusinessRuleName">Demo.FHIRPlace.RuleSet.HL7v2.MRNExtractor</Setting>
+  </Item>
+  <Item Name="Data.HL7v2toFHIR.Input" Category="FHIRStarter" ClassName="EnsLib.HL7.Service.FileService" PoolSize="1" Enabled="true" Foreground="false" Comment="" LogTraceEvents="false" Schedule="">
+    <Setting Target="Host" Name="MessageSchemaCategory">2.5</Setting>
+    <Setting Target="Adapter" Name="FileSpec">*HL7toFHIR*</Setting>
+    <Setting Target="Host" Name="TargetConfigNames">Data.BPL.LegacyToSDA</Setting>
+    <Setting Target="Host" Name="AckMode">Never</Setting>
+  </Item>
+  <Item Name="Data.XML.Input" Category="FHIRStarter" ClassName="EnsLib.EDI.XML.Service.FileService" PoolSize="1" Enabled="true" Foreground="false" Comment="" LogTraceEvents="false" Schedule="">
+    <Setting Target="Host" Name="TargetConfigNames">Data.BPL.LegacyToSDA</Setting>
+    <Setting Target="Adapter" Name="FileSpec">*ISC*</Setting>
+    <Setting Target="Host" Name="DocSchemaCategory">ISCPATIENTtoFHIR</Setting>
+    <Setting Target="Host" Name="ArchiveIO">1</Setting>
+  </Item>
+  <Item Name="Data.CDA.Input" Category="FHIRStarter" ClassName="EnsLib.File.PassthroughService" PoolSize="1" Enabled="true" Foreground="false" Comment="" LogTraceEvents="false" Schedule="">
+    <Setting Target="Host" Name="TargetConfigNames">Data.BPL.LegacyToSDA</Setting>
+    <Setting Target="Adapter" Name="FileSpec">*CCDA*</Setting>
+    <Setting Target="Host" Name="ArchiveIO">1</Setting>
+  </Item>
+  <Item Name="Data.BPL.LegacyToSDA" Category="FHIRStarter" ClassName="Demo.FHIRStarter.BPL.LegacyDataConverter" PoolSize="1" Enabled="true" Foreground="false" Comment="" LogTraceEvents="true" Schedule="">
+  </Item>
+  <Item Name="Data.Process.SDAtoFHIR" Category="FHIRStarter" ClassName="HS.FHIR.DTL.Util.HC.SDA3.FHIR.Process" PoolSize="2" Enabled="true" Foreground="false" Comment="" LogTraceEvents="false" Schedule="">
+    <Setting Target="Host" Name="TargetConfigName">FHIR.Local.RequestHandler</Setting>
+    <Setting Target="Host" Name="FHIREndpoint">/fhirstarter/r4</Setting>
+    <Setting Target="Host" Name="FHIRMetadataSet">HL7v40 / Base HL7 Metadata for FHIR R4 (4.0.1)</Setting>
+    <Setting Target="Host" Name="OutputToQuickStream">0</Setting>
+    <Setting Target="Host" Name="FullTransactionResponse">0</Setting>
+    <Setting Target="Host" Name="TraceOperations"></Setting>
+  </Item>
+  <Item Name="Data.CSV.Input" Category="FHIRStarter" ClassName="EnsLib.RecordMap.Service.FileService" PoolSize="1" Enabled="true" Foreground="false" Comment="" LogTraceEvents="false" Schedule="">
+    <Setting Target="Host" Name="RecordMap">Demo.FHIRStarter.RecordMap.Patient</Setting>
+    <Setting Target="Host" Name="TargetConfigNames">Data.BPL.LegacyToSDA</Setting>
+    <Setting Target="Adapter" Name="FileSpec">*CSV*</Setting>
+    <Setting Target="Host" Name="HeaderCount">1</Setting>
+    <Setting Target="Host" Name="ThrottleDelay">500</Setting>
+  </Item>
+</Production>
+]]></Data>
+</XData>
+</Class>
+
+
+<Document name="Ens.Config.DefaultSettings.ESD">
+<defaultSettings>
+<item production="*" item="*" class="*" setting="FilePath" value="/tmp/ISC/in/"><Deployable>true</Deployable></item>
+</defaultSettings>
+</Document>
+
+<Document name="EnsExportNotes.EnsExportProduction_2021-03-25 16-21-00_981-4.PTD"><ProjectTextDocument name="EnsExportNotes.EnsExportProduction_2021-03-25 16-21-00_981-4" description="Export Notes for export EnsExportProduction_2021-03-25 16-21-00_981-4">
+<![CDATA[<Deployment>
+<Creation>
+<Machine>JMORGAN9020.ISCINTERNAL.COM</Machine>
+<Instance>IH_LATEST</Instance>
+<Namespace>TEST</Namespace>
+<SourceProduction>SUREFHIRPKG.FoundationProduction</SourceProduction>
+<Username>jeff</Username>
+<UTC>2021-03-25 20:21:45.187</UTC>
+</Creation>
+<Notes>
+</Notes>
+<Contents>
+<ExportProject>EnsExportProduction_2021-03-25 16-21-00_981-4</ExportProject>
+<Item num="1">Demo.FHIRPlace.BPL.BundleFlip.CLS</Item>
+<Item num="2">Demo.FHIRPlace.BPL.FHIRDataCollector.CLS</Item>
+<Item num="3">Demo.FHIRPlace.BPL.PatientDelete.CLS</Item>
+<Item num="4">Demo.FHIRPlace.DTL.BuildFHIRDeleteBundle.CLS</Item>
+<Item num="5">Demo.FHIRPlace.DTL.BuildFHIRInteropRequest.BundleFlip.CLS</Item>
+<Item num="6">Demo.FHIRPlace.DTL.BuildFHIRInteropRequest.ExternalPatientGetEverything.CLS</Item>
+<Item num="7">Demo.FHIRPlace.DTL.BuildFHIRInteropRequest.ExternalPatientSearch.CLS</Item>
+<Item num="8">Demo.FHIRPlace.DTL.BuildFHIRInteropRequest.InternalPatientGetEverything.CLS</Item>
+<Item num="9">Demo.FHIRPlace.DTL.BuildFHIRInteropRequest.InternalPatientSearch.CLS</Item>
+<Item num="10">Demo.FHIRPlace.DTL.BuildFHIRInteropRequest.PatientDelete.CLS</Item>
+<Item num="11">Demo.FHIRPlace.DTL.BuildFHIRInteropRequest.PatientGetEverythingSubTransform.CLS</Item>
+<Item num="12">Demo.FHIRPlace.DTL.BuildFHIRInteropRequest.PatientSearchSubTransform.CLS</Item>
+<Item num="13">Demo.FHIRPlace.DTL.FHIRResponseExtract.GetPatientResourceId.CLS</Item>
+<Item num="14">Demo.FHIRPlace.DTL.FHIRResponseExtract.QuickStreamToJSON.CLS</Item>
+<Item num="15">Demo.FHIRPlace.DTL.HL7v2.ExtractMRN.CLS</Item>
+<Item num="16">Demo.FHIRPlace.RecordMap.FHIRPatientId.Record.CLS</Item>
+<Item num="17">Demo.FHIRPlace.RecordMap.MRN.CLS</Item>
+<Item num="18">Demo.FHIRPlace.RecordMap.MRN.Record.CLS</Item>
+<Item num="19">Demo.FHIRPlace.RuleSet.HL7v2.MRNExtractor.CLS</Item>
+<Item num="20">Demo.FHIRServer.Tools.BundleConverter.CLS</Item>
+<Item num="21">Demo.FHIRStarter.BPL.LegacyDataConverter.CLS</Item>
+<Item num="22">Demo.FHIRStarter.DTL.PatientCSVtoSDA.CLS</Item>
+<Item num="23">Demo.FHIRStarter.DTL.XMLvDOCtoSDA.CLS</Item>
+<Item num="24">Demo.FHIRStarter.RecordMap.Patient.CLS</Item>
+<Item num="25">Demo.FHIRStarter.RecordMap.Patient.Record.CLS</Item>
+<Item num="26">Demo.FHIRStarter.Util.FunctionSet.CLS</Item>
+<Item num="27">Ens.Config.DefaultSettings.ESD</Item>
+<Item num="28">SUREFHIRPKG.FoundationProduction.CLS</Item>
+</Contents>
+<ProductionClassInExport>SUREFHIRPKG.FoundationProduction</ProductionClassInExport>
+</Deployment>
+
+]]></ProjectTextDocument>
+</Document></Export>

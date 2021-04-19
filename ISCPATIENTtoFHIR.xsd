@@ -1,0 +1,81 @@
+<xs:schema attributeFormDefault="unqualified" elementFormDefault="qualified" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="Chart">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element type="xs:string" name="CodeSystem"/>
+        <xs:element name="Patient">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element type="xs:string" name="FirstName"/>
+              <xs:element type="xs:string" name="FamilyName"/>
+              <xs:element type="xs:int" name="ContactNo"/>
+              <xs:element type="xs:string" name="Email"/>
+              <xs:element name="Address">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element type="xs:string" name="City"/>
+                    <xs:element type="xs:string" name="State"/>
+                    <xs:element type="xs:short" name="Zip"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element type="xs:int" name="DOB"/>
+              <xs:element type="xs:string" name="MRN"/>
+              <xs:element name="Gender">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element type="xs:string" name="Code"/>
+                    <xs:element type="xs:string" name="Description"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+              <xs:element type="xs:long" name="Encounter"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="Encounter" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element type="xs:string" name="Type"/>
+              <xs:element type="xs:string" name="Description"/>
+              <xs:element type="xs:long" name="From"/>
+              <xs:element type="xs:int" name="To"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="Diagnosis" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element type="xs:string" name="Type"/>
+              <xs:element name="Code">
+                <xs:complexType>
+                  <xs:simpleContent>
+                    <xs:extension base="xs:float">
+                      <xs:attribute type="xs:string" name="Type"/>
+                      <xs:attribute type="xs:string" name="Type_oid"/>
+                    </xs:extension>
+                  </xs:simpleContent>
+                </xs:complexType>
+              </xs:element>
+              <xs:element type="xs:string" name="Description"/>
+              <xs:element type="xs:long" name="Time"/>
+              <xs:element type="xs:string" name="HospitalId"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="Order" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element type="xs:short" name="Type"/>
+              <xs:element type="xs:string" name="TypeDescription"/>
+              <xs:element type="xs:short" name="Code"/>
+              <xs:element type="xs:string" name="OrderDescription"/>
+              <xs:element type="xs:long" name="Time"/>
+              <xs:element type="xs:byte" name="Quantity"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

@@ -1,0 +1,43 @@
+﻿<?xml version="1.0" encoding="ISO-8859-1"?>
+<Chart>        
+    <CodeSystem>2.16.840.1.113883.5.1</CodeSystem>
+    <Patient>
+        <FirstName>Jeffery</FirstName>
+        <FamilyName>Morgan</FamilyName>
+        <ContactNo>1234567890</ContactNo>
+        <Email>jmorg@xyz.com</Email>
+        <Address>
+           <City>Malden</City>
+           <State>Massachusettes</State>
+           <Zip>02148</Zip>
+        </Address>
+        <DOB>12161990</DOB>
+        <MRN>AB987654321Z</MRN>
+        <Gender>
+        <Code>M</Code>
+        <Description>Male</Description>
+        </Gender>
+        <Encounter>0102202010001</Encounter>
+    </Patient>
+    <Encounter>
+        <Type>HOME</Type>
+        <Description>Discharge home</Description>
+        <From>0101202015555</From>
+        <To>01022020111</To>
+    </Encounter>
+    <Diagnosis>
+        <Type>Primary</Type>
+        <Code Type="ICD-9" Type_oid="2.16.840.1.113883.6.103">873.42</Code>
+        <Description>Forehead laceration</Description>
+        <Time>010120200333</Time>
+        <HospitalId>ABC321</HospitalId>
+    </Diagnosis>
+    <Order>
+        <Type>220</Type>
+        <TypeDescription>CPT</TypeDescription>
+        <Code>24665</Code>
+        <OrderDescription>Open TX radial head/neck fracture</OrderDescription>
+        <Time>010220201700</Time>
+        <Quantity>1</Quantity>
+    </Order>
+</Chart>

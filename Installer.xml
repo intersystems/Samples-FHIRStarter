@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="IRIS" version="26" zv="IRIS for Windows (x86-64) 2021.1 (Build 194U)" ts="2021-04-16 18:41:54">
+<Class name="Demo.Installer">
+<IncludeCode>%occInclude</IncludeCode>
+<Super>Demo.InstallerBase</Super>
+<TimeChanged>65850,67290.561166</TimeChanged>
+<TimeCreated>65430,5608.648608</TimeCreated>
+
+<XData name="Install">
+<XMLNamespace>INSTALLER</XMLNamespace>
+<Data><![CDATA[
+<Manifest>
+
+  <Var Name="iscusrPwd" Value="iscdemo" />
+  <User Username="iscusr" PasswordVar="iscusrPwd" Roles="%All" Enabled="1" />
+  
+  <!-- Create the HS_Services user here to prevent "Change Password" flag from being turned on -->
+  <Var Name="HS_ServicesPwd" Value="HS_Services" />
+  <User Username="HS_Services" PasswordVar="HS_ServicesPwd" Roles="%All" Enabled="1" />
+
+  <Resource Name="%DB_SUREFHIR" />
+  <Role Name="%DB_SUREFHIR" Description="SUREFHIR Database User" Resources="%DB_SUREFHIR:RW" />
+  
+  <Namespace Name="SUREFHIR" Create="yes" Code="SUREFHIR" Data="SUREFHIR">
+    <Log Text="Creating SUREFHIR Database" Level="0"/>
+    <Configuration>
+	<Database Name="SUREFHIR" Create="yes" Dir="${MGRDIR}/SUREFHIR" MountAtStartup="1" MountRequired="1" Resource="%DB_SUREFHIR"/>
+    </Configuration>
+  </Namespace>
+    
+  <Namespace Name="HSLIB" Create="no">
+	<Log Text="Installing Foundation" Level="0"/>
+	<Invoke Class="HS.HC.Util.Installer" Method = "InstallFoundation" CheckStatus="true">
+		<Arg Value="SUREFHIR"/>
+	</Invoke>
+  </Namespace>
+  
+  <Namespace Name="SUREFHIR" Create="no" Code="SUREFHIR" Data="SUREFHIR">
+     <Log Text="Import XML Schemas" Level="0"/>
+     <Invoke Class="EnsLib.EDI.XML.SchemaXSD" Method="Import" CheckStatus="true">
+   		<Arg Value="${ISC_PACKAGE_INSTALLDIR}/mgr/ISCPATIENTtoFHIR.xsd"/>
+   	</Invoke>
+     <Invoke Class="EnsLib.EDI.XML.SchemaXSD" Method="Import" CheckStatus="true">
+   		<Arg Value="${ISC_PACKAGE_INSTALLDIR}/mgr/HS.SDA3.xsd"/>
+   	</Invoke>
+	
+    <Log Text="Importing SUREFHIR Export" Level="0"/>
+	<Import File='${ISC_PACKAGE_INSTALLDIR}/mgr/SUREFHIR_Export.xml' Flags="cuk" Recurse="true" />
+
+	<!-- Install elements required for FHIR-enabled namespace -->
+	<Log Text="FHIR Enabling SUREFHIR namespace" Level="0"/>
+	<Invoke Class="HS.FHIRServer.Installer" Method="InstallNamespace" CheckStatus="false">
+	</Invoke>
+	
+	<!-- Install an instance of a FHIR Service into the current namespace for FHIRSTARTER-->
+	<Log Text="Installing FHIR Service into SUREFHIR for FHIRSTARTER" Level="0"/>
+	<Invoke Class="HS.FHIRServer.Installer" Method="InstallInstance" CheckStatus="false">
+   		<Arg Value="/fhirstarter/r4"/>
+   		<Arg Value="HS.FHIRServer.Storage.Json.InteractionsStrategy"/>
+   		<Arg Value="HL7v40"/>
+	</Invoke>
+	
+		<!-- Install an instance of a FHIR Service into the current namespace for FHIRPLACE-->
+	<Log Text="Installing FHIR Service into SUREFHIR for FHIRPLACE" Level="0"/>
+	<Invoke Class="HS.FHIRServer.Installer" Method="InstallInstance" CheckStatus="false">
+   		<Arg Value="/fhirplace/r4"/>
+   		<Arg Value="HS.FHIRServer.Storage.Json.InteractionsStrategy"/>
+   		<Arg Value="HL7v40"/>
+	</Invoke>
+<Production Name="SUREFHIRPKG.FoundationProduction" AutoStart="1" />
+  </Namespace>
+  
+    <Namespace Name="%SYS" Create="no">
+  		<!-- Instantiate the Service Registry entry required for FHIRPLACE-->
+		<Log Text="Initializing Service Registry entry in SUREFHIR for FHIRPLACE" Level="0"/>
+		<Invoke Class="Demo.Installer" Method="AddServiceRegistryEntry" CheckStatus="true">
+		</Invoke>
+    </Namespace>
+</Manifest>
+]]></Data>
+</XData>
+</Class>
+
+
+<Class name="Demo.InstallerBase">
+<Abstract>1</Abstract>
+<TimeChanged>65850,59388.478964</TimeChanged>
+<TimeCreated>65848,46953.919264</TimeCreated>
+
+<Method name="Setup">
+<Description>
+This method must always be here</Description>
+<Internal>1</Internal>
+<ClassMethod>1</ClassMethod>
+<CodeMode>objectgenerator</CodeMode>
+<FormalSpec><![CDATA[&pVars,pLogLevel:%Integer=0,pInstaller:%Installer.Installer]]></FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[	     Quit ##class(%Installer.Manifest).%Generate(%compiledclass, %code, "Install")
+]]></Implementation>
+</Method>
+
+<Method name="Install">
+<Description>
+This method is called by a RUN instruction inside your Dockerfile or VM script. It will
+use environment variables to further parameterize this Setup.</Description>
+<ClassMethod>1</ClassMethod>
+<Implementation><![CDATA[
+	#dim pVars
+	#dim tStatus As %Status
+	#dim tLogLevel As %Integer = 3
+	
+	Try {
+			
+		// Initialize any variables we want to pass to the installer
+		Set pVars("GLOBALBUFFERS") = 4096
+		Set pVars("ROUTINEBUFFERS") = 512 
+		Set pVars("ISC_PACKAGE_INSTALLDIR") = "/usr/irissys/"	
+				
+		Set tStatus = ..Setup(.pVars,tLogLevel)
+	} 
+	Catch (oException) {
+		Set tStatus = oException.AsStatus()
+	}
+		
+	/// This terminates this process with a exit value for the operating system so that
+	/// Docker can know if everything worked fine or not.
+	If $System.Status.IsError(tStatus) 
+	{ 
+		Do $System.Status.DisplayError(tStatus) // Show error message before exiting 
+		Do $zu(4,$j,1)  // exit status 1
+	} 
+	Else 
+	{ 
+		Do $zu(4,$j,0) // exit status 0
+	}
+]]></Implementation>
+</Method>
+
+<Method name="AddServiceRegistryEntry">
+<Description>
+This method is called by the Installer Manifest to add a Service Registry entry to the SUREFHIR namespace</Description>
+<ClassMethod>1</ClassMethod>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	#dim tStatus As %Status
+	
+	//Save current namespace and then switch to "SUREFHIR"
+	Set tStartingNamespace = $NAMESPACE
+	Set $NAMESPACE = "SUREFHIR"
+	
+	Try {
+		// Initialize Service Registry Entry
+		Set tRegEntry = ##Class(HS.Registry.Service.HTTP).%New()
+		Set tRegEntry.Name = "EMREmulatorFHIRR4"
+		Set tRegEntry.Type = "HTTP"
+		Set tRegEntry.Host = "localhost"
+		Set tRegEntry.Port = $GET(^%SYS("WebServer","Port"))
+		Set tRegEntry.URL = "/fhirstarter/r4"
+		Set tRegEntry.HTTPCredentialsConfig = "HS_Services"
+		Set tStatus = tRegEntry.%Save()		
+	} 
+	Catch (oException) {
+		Set tStatus = oException.AsStatus()
+	}
+	
+	//Switch back to original namespace
+	Set $NAMESPACE = tStartingNamespace
+	
+	Quit tStatus
+]]></Implementation>
+</Method>
+
+<XData name="Install">
+<XMLNamespace>INSTALLER</XMLNamespace>
+<Data><![CDATA[
+<Manifest>
+
+	</Manifest>
+]]></Data>
+</XData>
+</Class>
+</Export>
