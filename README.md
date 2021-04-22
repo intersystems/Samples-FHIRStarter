@@ -41,7 +41,7 @@ This demo shows how incoming messages of different formats (HL7, XML, or CDA) ca
 
 * If you need to change the webserver port to avoid port conflict, the argument format is NEWPORT:CURRENTPORT. For example, to switch to port 51773, you would set the parameter to 51773:52733.
 * The hostname flag sets the server name of the container instance to *sdashredder*, which matches how the FHIR components are installed. If you change this to something else, you will need to adjust it per the Post Installation Notes, specifically #1.
-* The production makes use of file drops, so you must map a folder to the Docker container. In order to use - for this example, I have mapped a local folder path using the *-v* flag: `/users/tmp/docker/sdashredder/ISC` to the container folder `/tmp/ISC`.
+* The production makes use of file drops, so you must map a folder to the Docker container. For this example, I have mapped a local folder path using the *-v* flag: `/users/tmp/docker/sdashredder/ISC` to the container folder `/tmp/ISC`.
 
 ## Check installation work
 To verify you have installed succesfully:
