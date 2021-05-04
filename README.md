@@ -40,10 +40,10 @@ This demo shows how incoming messages of different formats (HL7, XML, or CDA) ca
 ## Check installation work
 To verify you have installed succesfully:
 
-1. Open the SUREFHIR production and check that all components are active and that none of them have errors.
+1. Open the Management Portal, using *SuperUser* for username and *SYS* for password. Open the SUREFHIR production and check that all components are active and that none of them have errors.
 
 2. Check the file path referenced in the file services within the SUREFHIR production.
-     - Go to Interoperability > Configure > System Default Settings.
+     - Go to **Interoperability** > **Configure** > **System Default Settings**.
      - Edit the Inbound file service path if needed.
      - Click the System Default Setting **FilePath**, and confirm the Setting Value is the drive you mounted during the `Docker Run` execution.
      - Make sure to click **Save** once you have made your changes.
@@ -77,7 +77,7 @@ The .hl7 message includes an MRN value in the list of patient identifiers that g
 The .txt file is picked up by a simple Record Map definition in the demonstration.
 Both of these MRN input values are handed off to the PatientRecordCollector BPL.
 
-Next, do the following: 
+The *PatientRecordCollector BPL* supports multi-step orchestration. To see how it works, complete the following steps: 
 
 1. Delete any existing resources in the local `/fhirplace/r4` endpoint for the MRN from the input file. This assures there is no accidental duplication of data inside the FHIR repository.
 2. Call out to an external FHIR endpoint labeled `EMREmulatorFHIRR4`. In this demonstration, that Service Registry points to the FHIRStarter endpoint `/fhirstarter/r4`. There are two calls to this endpoint:
