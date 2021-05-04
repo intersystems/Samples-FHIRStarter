@@ -7,7 +7,7 @@ This demo shows how incoming messages of different formats (HL7, XML, or CDA) ca
 ### Script files
  1. `DockerFile` — script for building a Docker container
  2. `Installer.xml` — installer manifest for setting up an IRIS instance
- 3. `SDAShredder-Export.xml` — all the classes required for an SDAShredder production
+ 3. `SUREFHIR_Export.xml` — all the classes required for an SUREFHIR production
  4. `ISCPATIENTtoFHIR.xsd` — schema for an XML file
  5. `HS.SDA3.xsd` — schema for a CDA file
 
@@ -25,30 +25,26 @@ This demo shows how incoming messages of different formats (HL7, XML, or CDA) ca
 
 2. Open the Terminal or command prompt window and change the directory to `SUREFHIRDemo`.
 
-3. Execute the Docker Build command by doing one of the following:
-
-* Execute the `build.sh` shell script.
-* Use the Docker Build command: `docker build -t irishealth-surefhir-demo:1.0 .`
+3. Execute the Docker Build command by running thr Docker Build command: `docker build -t irishealth-surefhir-demo:1.0 .`
 
 **Note:** the period at the end of the Docker Build command is **required**.
 
-4. Execute the Docker Run command by doing one of the following:
-
-* Execute  the `run.sh` shell script.
-* Use the Docker Run command: `docker run -d --hostname SUREFHIR -p 52773:52773 --init -v $PWD/ISC:/tmp/ISC --name SUREFHIR irishealth-surefhir-demo:1.0`.
+4. Execute the Docker Run command by running the Docker Run command: `docker run -d --hostname SUREFHIR -p 52773:52773 --init -v $PWD/ISC:/tmp/ISC --name SUREFHIR irishealth-surefhir-demo:1.0`.
 
 ## Important notes
 
 * If you need to change the webserver port to avoid port conflict, the argument format is NEWPORT:CURRENTPORT. For example, to switch to port 51773, you would set the parameter to 51773:52733.
-* The hostname flag sets the server name of the container instance to *sdashredder*, which matches how the FHIR components are installed. If you change this to something else, you will need to adjust it per the Post Installation Notes, specifically #1.
-* The production makes use of file drops, so you must map a folder to the Docker container. For this example, I have mapped a local folder path using the *-v* flag: `/users/tmp/docker/sdashredder/ISC` to the container folder `/tmp/ISC`.
+* The hostname flag sets the server name of the container instance to *SUREFHIR*, which matches how the FHIR components are installed. If you change this to something else, you will need to adjust it per the Post Installation Notes, specifically #1.
+* The production makes use of file drops, so you must map a folder to the Docker container. For this example, the path to the container folder is `$PWD/ISC`.
 
 ## Check installation work
 To verify you have installed succesfully:
 
-1. Check the file path referenced in the file services within the SDAShredder production.
+1. Open the SUREFHIR production and check that all components are active and that none of them have errors.
+
+2. Check the file path referenced in the file services within the SUREFHIR production.
      - Go to Interoperability > Configure > System Default Settings.
-     - Update the inbound file service path if needed.
+     - Edit the Inbound file service path if needed.
      - Click the System Default Setting **FilePath**, and confirm the Setting Value is the drive you mounted during the `Docker Run` execution.
      - Make sure to click **Save** once you have made your changes.
 
@@ -63,7 +59,7 @@ Take a look at the `FHIRStarter` sample, which contains the following files:
 * `ISC/HL7toFHIR.HL7` — sample HL7 file to be converted into FHIR
 * `ISC/PatientsCSVtoFHIR.csv` — sample CSV file
 
-Drop one sample file into the mapped folder and see that it is picked up and processed. If it works, you should receive a successful FHIR response.
+Drop one sample file into the mapped folder and see that it is picked up and processed. Navigate to **Interoperability** > **View** > **Message**. If it works, you should receive a successful FHIR response in the message trace.
 Note that the `PatientsCSVtoFHIR` sample file has 200 patients to convert into FHIR resources. This can take up to 60 seconds depending on the system resources available to the demonstration instance.
 
 ## Test the sample FHIRPlace
@@ -104,5 +100,3 @@ docker-compose rm
 ```
 
 This is particularly helpful if you have other demos running on the same machine.
-
-
