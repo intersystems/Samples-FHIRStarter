@@ -1,6 +1,6 @@
 # SUREFHIR Demo R4 Version 1.0
 
-This demo shows how incoming messages of different formats (HL7, XML, or CDA) can be transformed into SDA and ulitmately sent out via a FHIR® server Interop operation.
+This demo shows how incoming messages of different formats (HL7, XML, or CDA) can be transformed into SDA and ultimately sent out via a FHIR® server Interop operation.
 
 ## Contents
 
