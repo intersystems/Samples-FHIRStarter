@@ -1083,7 +1083,7 @@ Output:<br>
 Example:<br>
 Set metaAPI = ##class(HS.FHIRMeta.API).getInstance($lb("hl7.fhir.r4.core@4.0.1"))<br>
 Set bundle = {}.%FromJSON("<file_name>")<br>
-Do ##class(HS.FHIRServer.Tools.BundleConverter).ToTransactionBundle(.bundle, metaAPI)<br>
+Do ##class(Demo.FHIRServer.Tools.BundleConverter).ToTransactionBundle(.bundle, metaAPI)<br>
 Write ##class(HS.FHIRServer.Util.JsonHelper).ToJSONString(bundle, "  ",$Char(13,10))<br>
 <br>]]></Description>
 <ClassMethod>1</ClassMethod>
