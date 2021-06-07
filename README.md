@@ -1,4 +1,4 @@
-# SUREFHIR Demo R4 Version 1.0
+# FHIRStarter Demo R4 Version 1.0
 
 This demo shows how incoming messages of different formats (HL7, XML, or CDA) can be transformed into SDA and ultimately sent out via a FHIR® server Interop operation.
 
@@ -7,7 +7,7 @@ This demo shows how incoming messages of different formats (HL7, XML, or CDA) ca
 ### Script files
  1. `DockerFile` — script for building a Docker container
  2. `Installer.xml` — installer manifest for setting up an IRIS instance
- 3. `SUREFHIR_Export.xml` — all the classes required for an SUREFHIR production
+ 3. `FHIRStarter_Export.xml` — all the classes required for an FHIRStarter production
  4. `ISCPATIENTtoFHIR.xsd` — schema for an XML file
  5. `HS.SDA3.xsd` — schema for a CDA file
 
@@ -23,26 +23,26 @@ This demo shows how incoming messages of different formats (HL7, XML, or CDA) ca
 
 1. Clone this repository: `git clone`.
 
-2. Open the Terminal or command prompt window and change the directory to `SUREFHIRDemo`.
+2. Open the Terminal or command prompt window and change the directory to `FHIRStarterDemo`.
 
-3. Execute the Docker Build command by running thr Docker Build command: `docker build -t irishealth-surefhir-demo:1.0 .`
+3. Execute the Docker Build command by running thr Docker Build command: `docker build -t irishealth-fhirstarter-demo:1.0 .`
 
 **Note:** the period at the end of the Docker Build command is **required**.
 
-4. Execute the Docker Run command by running the Docker Run command: `docker run -d --hostname SUREFHIR -p 52773:52773 --init -v $PWD/ISC:/tmp/ISC --name SUREFHIR irishealth-surefhir-demo:1.0`.
+4. Execute the Docker Run command by running the Docker Run command: `docker run -d --hostname FHIRStarter -p 52773:52773 --init -v $PWD/ISC:/tmp/ISC --name FHIRStarter irishealth-fhirstarter-demo:1.0`.
 
 ## Important notes
 
 * If you need to change the webserver port to avoid port conflict, the argument format is NEWPORT:CURRENTPORT. For example, to switch to port 51773, you would set the parameter to 51773:52733.
-* The hostname flag sets the server name of the container instance to *SUREFHIR*, which matches how the FHIR components are installed. If you change this to something else, you will need to adjust it per the Post Installation Notes, specifically #1.
+* The hostname flag sets the server name of the container instance to *FHIRStarter*, which matches how the FHIR components are installed. If you change this to something else, you will need to adjust it per the Post Installation Notes, specifically #1.
 * The production makes use of file drops, so you must map a folder to the Docker container. For this example, the path to the container folder is `$PWD/ISC`.
 
 ## Check installation work
 To verify you have installed succesfully:
 
-1. Open the Management Portal, using *SuperUser* for username and *SYS* for password. Open the SUREFHIR production and check that all components are active and that none of them have errors.
+1. Open the Management Portal, using *SuperUser* for username and *SYS* for password. Open the FHIRStarter production and check that all components are active and that none of them have errors.
 
-2. Check the file path referenced in the file services within the SUREFHIR production.
+2. Check the file path referenced in the file services within the FHIRStarter production.
      - Go to **Interoperability** > **Configure** > **System Default Settings**.
      - Edit the Inbound file service path if needed.
      - Click the System Default Setting **FilePath**, and confirm the Setting Value is the drive you mounted during the `Docker Run` execution.

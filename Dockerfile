@@ -6,7 +6,7 @@ FROM store/intersystems/irishealth-community:2020.4.0.547.0
 
 # Copy app file dependencies from the host to the container IRIS mgr dir:
 USER root
-COPY ./Installer.xml ./SUREFHIR_Export.xml ./ISCPATIENTtoFHIR.xsd ./HS.SDA3.xsd $ISC_PACKAGE_INSTALLDIR/mgr/
+COPY ./Installer.xml ./FHIRStarter_Export.xml ./ISCPATIENTtoFHIR.xsd $ISC_PACKAGE_INSTALLDIR/mgr/
 
 # RUN a series of commands
 # * Loading installer directives (create DB, etc. see Installer.xml)
