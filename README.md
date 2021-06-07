@@ -8,8 +8,7 @@ This demo shows how incoming messages of different formats (HL7, XML, or CDA) ca
  1. `DockerFile` — script for building a Docker container
  2. `Installer.xml` — installer manifest for setting up an IRIS instance
  3. `FHIRStarter_Export.xml` — all the classes required for an FHIRStarter production
- 4. `ISCPATIENTtoFHIR.xsd` — schema for an XML file
- 5. `HS.SDA3.xsd` — schema for a CDA file
+ 4. `ISCPATIENTtoFHIR.xml` — schema for an XML file
 
 ### Sample files
  1. `ISC/ISCPATIENTtoFHIR.xml` — sample XML file
@@ -25,7 +24,7 @@ This demo shows how incoming messages of different formats (HL7, XML, or CDA) ca
 
 2. Open the Terminal or command prompt window and change the directory to `FHIRStarterDemo`.
 
-3. Execute the Docker Build command by running thr Docker Build command: `docker build -t irishealth-fhirstarter-demo:1.0 .`
+3. Execute the Docker Build command by running the Docker Build command: `docker build -t irishealth-fhirstarter-demo:1.0 .`
 
 **Note:** the period at the end of the Docker Build command is **required**.
 
