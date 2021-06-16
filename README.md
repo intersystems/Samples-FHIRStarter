@@ -99,3 +99,7 @@ docker-compose rm
 ```
 
 This is particularly helpful if you have other demos running on the same machine.
+
+## Watch it happen
+You can also watch the [Converting Legacy Data to HL7 FHIR R4 in InterSystems IRIS for Health](https://learning.intersystems.com/course/view.php?name=FHIRStarterDemo) video to see this demo in action and learn more about this functionality.
+
