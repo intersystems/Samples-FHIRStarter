@@ -24,11 +24,11 @@ This demo shows how incoming messages of different formats (HL7, XML, or CDA) ca
 
 2. Open the Terminal or command prompt window and change the directory to `FHIRStarterDemo`.
 
-3. Execute the Docker Build command by running the Docker Build command: `docker build -t irishealth-fhirstarter-demo:1.0 .`
+3. Execute the Docker Build command by running the following command. Note that the period at the end is **required**.  
+   `docker build -t irishealth-fhirstarter-demo:1.0 .`
 
-**Note:** the period at the end of the Docker Build command is **required**.
-
-4. Execute the Docker Run command by running the Docker Run command: `docker run -d --hostname FHIRStarter -p 52773:52773 --init -v $PWD/ISC:/tmp/ISC --name FHIRStarter irishealth-fhirstarter-demo:1.0`.
+4. Execute the Docker Run command by running the following:   
+   `docker run -d --hostname FHIRStarter -p 52773:52773 --init -v $PWD/ISC:/tmp/ISC --name FHIRStarter irishealth-fhirstarter-demo:1.0`
 
 ## Important notes
 
@@ -99,3 +99,7 @@ docker-compose rm
 ```
 
 This is particularly helpful if you have other demos running on the same machine.
+
+## Watch it happen
+You can also watch the [Converting Legacy Data to HL7 FHIR R4 in InterSystems IRIS for Health](https://learning.intersystems.com/course/view.php?name=FHIRStarterDemo) video to see this demo in action and learn more about this functionality.
+
