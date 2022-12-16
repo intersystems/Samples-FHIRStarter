@@ -4,9 +4,15 @@
     <Module>
       <Name>fhir-starter</Name>
       <Version>1.0.0</Version>
-      <Description></Description>
+      <Description>This demo shows how incoming messages of different formats (HL7, XML, or CDA) can be transformed into SDA and ultimately sent out via a FHIR® server Interop operation</Description>
       <Keywords>FHIR,Frontend,starter</Keywords>
       <Packaging>module</Packaging>
-    </Module>
+    <SourcesRoot>src</SourcesRoot>
+    <Invokes>
+     <Invoke Class="appmsw.util.database" Method="Init" >
+     </Invoke>
+    </Invokes>
+     <Resource Name="appmsw.PKG"/> 
+     <FileCopy Name="db-zip/" Target="${mgrdir}db-zip/"/>    </Module>
   </Document>
 </Export>
