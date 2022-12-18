@@ -9,10 +9,14 @@
       <Packaging>module</Packaging>
     <SourcesRoot>src</SourcesRoot>
     <Invokes>
-     <Invoke Class="appmsw.util.database" Method="Init" >
+     <Invoke Class="Demo.Installer" Method="Init" >
      </Invoke>
     </Invokes>
-     <Resource Name="appmsw.PKG"/> 
-     <FileCopy Name="db-zip/" Target="${mgrdir}db-zip/"/>    </Module>
+     <Resource Name="Demo.PKG"/> 
+     <Resource Name="FHIRDEMOPKG.PKG"/> 
+     <FileCopy Name="ISC/" Target="${mgrdir}fhir-starter-demo/ISC/"/>
+     <FileCopy Name="FHIRStarter_Export.xml" Target="${mgrdir}fhir-starter-demo/"/>
+     <FileCopy Name="ISCPATIENTtoFHIR.xsd" Target="${mgrdir}fhir-starter-demo/"/>
+   </Module>
   </Document>
 </Export>
