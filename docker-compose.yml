@@ -11,4 +11,4 @@ services:
       - 53553
     volumes:
       - ./:/irisdev/app
-      - $PWD/ISC:/tmp/ISC
+      - $PWD/ISC/In:/tmp/ISC/in

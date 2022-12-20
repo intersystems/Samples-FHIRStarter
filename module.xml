@@ -9,7 +9,7 @@
       <Packaging>module</Packaging>
     <SourcesRoot>src</SourcesRoot>
     <Invokes>
-     <Invoke Class="Demo.Installer" Method="Init" >
+     <Invoke Class="Demo.Installer" Method="Install" >
      </Invoke>
     </Invokes>
      <Resource Name="Demo.PKG"/> 

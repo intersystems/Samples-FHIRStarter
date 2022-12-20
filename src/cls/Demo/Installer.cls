@@ -31,11 +31,11 @@ XData Install [ XMLNamespace = INSTALLER ]
   <Namespace Name="FHIRDEMO" Create="no" Code="FHIRDEMO" Data="FHIRDEMO">
      <Log Text="Import XML Schemas" Level="0"/>
      <Invoke Class="EnsLib.EDI.XML.SchemaXSD" Method="Import" CheckStatus="true">
-   		<Arg Value="${ISC_PACKAGE_INSTALLDIR}/mgr/ISCPATIENTtoFHIR.xsd"/>
+   		<Arg Value="${ISC_PACKAGE_INSTALLDIR}mgr/fhir-starter-demo/ISCPATIENTtoFHIR.xsd"/>
    	</Invoke>
 	
     <Log Text="Importing FHIRStarter Export" Level="0"/>
-	<Import File='${ISC_PACKAGE_INSTALLDIR}/mgr/FHIRStarter_Export.xml' Flags="cuk" Recurse="true" />
+	<Import File='${ISC_PACKAGE_INSTALLDIR}mgr/fhir-starter-demo/FHIRStarter_Export.xml' Flags="cuk" Recurse="true" />
 
 	<!-- Install elements required for FHIR-enabled namespace -->
 	<Log Text="FHIR Enabling FHIRDEMO namespace" Level="0"/>
@@ -64,14 +64,7 @@ XData Install [ XMLNamespace = INSTALLER ]
 		<Arg Value="0"/>
 	</Invoke>
 <Production Name="FHIRDEMOPKG.FoundationProduction" AutoStart="1" />
-  </Namespace>
-  
-    <Namespace Name="%SYS" Create="no">
-  		<!-- Instantiate the Service Registry entry required for FHIRPLACE-->
-		<Log Text="Initializing Service Registry entry in FHIRDEMO for FHIRPLACE" Level="0"/>
-		<Invoke Class="Demo.Installer" Method="AddServiceRegistryEntry" CheckStatus="true">
-		</Invoke>
-    </Namespace>
+  </Namespace>  
 </Manifest>
 }
 
