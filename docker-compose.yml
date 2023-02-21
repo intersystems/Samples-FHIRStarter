@@ -1,0 +1,14 @@
+version: '3.8'
+services:
+  iris:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    ports: 
+      - 51553:1972
+      - 52553:52773
+      - 53553
+    volumes:
+      - ./:/irisdev/app
+      - $PWD/ISC/In:/tmp/ISC/in

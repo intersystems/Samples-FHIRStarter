@@ -2,7 +2,7 @@
 #
 # Build from the latest IRIS container image 
 # Derive container image from InterSystems container image 
-FROM store/intersystems/irishealth-community:2020.4.0.547.0
+FROM intersystemsdc/irishealth-community:latest
 
 # Copy app file dependencies from the host to the container IRIS mgr dir:
 USER root

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25">
+  <Document name="fhir-starter.ZPM">
+    <Module>
+      <Name>fhir-starter</Name>
+      <Version>1.0.0</Version>
+      <Description>This demo shows how incoming messages of different formats (HL7, XML, or CDA) can be transformed into SDA and ultimately sent out via a FHIR® server Interop operation</Description>
+      <Keywords>FHIR,Frontend,starter</Keywords>
+      <Packaging>module</Packaging>
+    <SourcesRoot>src</SourcesRoot>
+    <Invokes>
+     <Invoke Class="Demo.Installer" Method="Install" >
+     </Invoke>
+    </Invokes>
+     <Resource Name="Demo.PKG"/> 
+     <Resource Name="FHIRDEMOPKG.PKG"/> 
+     <FileCopy Name="ISC/" Target="${mgrdir}fhir-starter-demo/ISC/"/>
+     <FileCopy Name="FHIRStarter_Export.xml" Target="${mgrdir}fhir-starter-demo/"/>
+     <FileCopy Name="ISCPATIENTtoFHIR.xsd" Target="${mgrdir}fhir-starter-demo/"/>
+   </Module>
+  </Document>
+</Export>
