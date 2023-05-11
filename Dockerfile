@@ -2,7 +2,7 @@
 #
 # Build from the latest IRIS container image 
 # Derive container image from InterSystems container image 
-FROM intersystemsdc/irishealth-community:2023.0.1.229.0-zpm
+FROM intersystemsdc/irishealth-community:2023.1.0.229.0-zpm
 
 # Copy app file dependencies from the host to the container IRIS mgr dir:
 USER root
