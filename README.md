@@ -20,6 +20,8 @@ This demo shows how incoming messages of different formats (HL7, XML, or CDA) ca
 
 ## Installation instructions: 
 
+### Docker
+
 1. Clone this repository: `git clone`.
 
 2. Open the Terminal or command prompt window and change the directory to `FHIRStarterDemo`.
@@ -29,6 +31,20 @@ This demo shows how incoming messages of different formats (HL7, XML, or CDA) ca
 
 4. Execute the Docker Run command by running the following:   
    `docker run -d --hostname FHIRStarter -p 52773:52773 --init -v $PWD/ISC:/tmp/ISC --name FHIRStarter irishealth-fhirstarter-demo:1.0`
+
+### Locally
+
+1. Clone the repository into your mgr and rename the folder to 'fhir-starter-demo'
+
+2. Start your IRISHealth instance and compile the InstallerBase.cls and Installer.cls under src/cls/Demo
+
+3. Open IRISHealth terminal and run these commands
+   - do ##class(%SYSTEM.OBJ).load("PATH/Installer.xml")
+   - do ##class(Demo.Installer).Install()
+4. Compile the FoundationPRoduction under src/cls/FHIRDEMOPKG
+5. Open management portal, change the namespace to FHIRDEMO, and go to productions to check if all the services are there
+
+* If at any point somethings goes wrong and you're getting an error where file already exist, go to configuration --> Local Databases --> Delete FHIRDEMO --> Tick both boxes
 
 ## Important notes
 
