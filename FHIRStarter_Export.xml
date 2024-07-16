@@ -1193,7 +1193,7 @@ BPL Definition</Description>
 <trace name='Object Type' value='context.requestType' xpos='335' ypos='500' />
 <assign name="Transform CDA to SDA" property="context.status" value="context.transformer.Transform(request.StreamGet(),&quot;SDA3/CCDAv21-to-SDA.xsl&quot;,context.sdaStream)" action="set" xpos='335' ypos='600' />
 <assign name="Package Stream Container" property="context.status" value="context.streamContainer.StreamSet(context.sdaStream)" action="set" xpos='335' ypos='700' />
-<call name='Dispatch to Traget' target='Data.Process.SDAtoFHIR' async='1' xpos='335' ypos='800' >
+<call name='Dispatch to Traget' target='Data.Process.SDAtoFHIR' async='0' xpos='335' ypos='800' >
 <request type='Ens.StreamContainer' >
 <assign property="callrequest" value="context.streamContainer" action="set" />
 </request>
@@ -1206,7 +1206,7 @@ BPL Definition</Description>
 <trace name='Object Type' value='context.requestType' xpos='605' ypos='500' />
 <assign name="Transform HL7v2 to SDA" property="context.sdaStream" value="##class(Demo.FHIRStarter.Util.FunctionSet).GetSDAFromHL7(request)" action="set" xpos='605' ypos='600' />
 <assign name="Package Stream Container" property="context.status" value="context.streamContainer.StreamSet(context.sdaStream)" action="set" xpos='605' ypos='700' />
-<call name='Dispatch to Target' target='Data.Process.SDAtoFHIR' async='1' xpos='605' ypos='800' >
+<call name='Dispatch to Target' target='Data.Process.SDAtoFHIR' async='0' xpos='605' ypos='800' >
 <request type='Ens.StreamContainer' >
 <assign property="callrequest" value="context.streamContainer" action="set" />
 </request>
@@ -1220,7 +1220,7 @@ BPL Definition</Description>
 <transform name='Transform CSV to SDA' class='Demo.FHIRStarter.DTL.PatientCSVtoSDA' source='request' target='context.sdaObject' xpos='875' ypos='600' />
 <assign name="Generate SDA Stream" property="context.status" value="context.sdaObject.ToQuickXMLStream(context.sdaStream)" action="set" xpos='875' ypos='700' />
 <assign name="Package Stream Container" property="context.status" value="context.streamContainer.StreamSet(context.sdaStream)" action="set" xpos='875' ypos='800' />
-<call name='Dispatch to Target' target='Data.Process.SDAtoFHIR' async='1' xpos='875' ypos='900' >
+<call name='Dispatch to Target' target='Data.Process.SDAtoFHIR' async='0' xpos='875' ypos='900' >
 <request type='Ens.StreamContainer' >
 <assign property="callrequest" value="context.streamContainer" action="set" />
 </request>
@@ -1234,7 +1234,7 @@ BPL Definition</Description>
 <transform name='Transform XML VDoc to SDA' class='Demo.FHIRStarter.DTL.XMLvDOCtoSDA' source='request' target='context.sdaObject' xpos='1145' ypos='600' />
 <assign name="Generate SDA Stream" property="context.status" value="context.sdaObject.ToQuickXMLStream(context.sdaStream)" action="set" xpos='1145' ypos='700' />
 <assign name="Package Stream Container" property="context.status" value="context.streamContainer.StreamSet(context.sdaStream)" action="set" xpos='1145' ypos='800' />
-<call name='Dispatch to Target' target='Data.Process.SDAtoFHIR' async='1' xpos='1145' ypos='900' >
+<call name='Dispatch to Target' target='Data.Process.SDAtoFHIR' async='0' xpos='1145' ypos='900' >
 <request type='Ens.StreamContainer' >
 <assign property="callrequest" value="context.streamContainer" action="set" />
 </request>
