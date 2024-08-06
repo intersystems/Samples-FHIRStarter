@@ -15,6 +15,13 @@ COPY ./Installer.xml ./FHIRStarter_Export.xml ./ISCPATIENTtoFHIR.xsd $ISC_PACKAG
 #
 # Use the new irisowner, IRIS instance owner
 USER ${ISC_PACKAGE_MGRUSER}
+
+ENV PYTHON_PATH=/usr/irissys/bin/irispython
+ENV SRC_PATH=/opt/irisapp
+ENV IRISUSERNAME=SuperUser
+ENV IRISPASSWORD=SYS
+ENV IRISNAMESPACE=USER
+
 RUN iris start $ISC_PACKAGE_INSTANCENAME \
     && iris session $ISC_PACKAGE_INSTANCENAME -U %SYS "##class(%SYSTEM.OBJ).Load(\"$ISC_PACKAGE_INSTALLDIR/mgr/Installer.xml\",\"cdk\")" \
     && iris session $ISC_PACKAGE_INSTANCENAME -U %SYS "##class(Demo.Installer).Install()" \
