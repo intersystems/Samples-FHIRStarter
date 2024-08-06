@@ -23,7 +23,7 @@ XData Install [ XMLNamespace = INSTALLER ]
     
   <Namespace Name="HSLIB" Create="no">
 	<Log Text="Installing Foundation" Level="0"/>
-	<Invoke Class="HS.HC.Util.Installer" Method = "InstallFoundation" CheckStatus="true">
+	<Invoke Class="HS.Util.Installer.Foundation" Method = "Install" CheckStatus="true">
 		<Arg Value="FHIRDEMO"/>
 	</Invoke>
   </Namespace>
@@ -69,4 +69,3 @@ XData Install [ XMLNamespace = INSTALLER ]
 }
 
 }
-

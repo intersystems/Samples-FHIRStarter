@@ -5,6 +5,8 @@ services:
       context: .
       dockerfile: Dockerfile
     restart: always
+    hostname: fhir-starter
+    container_name: fhir-starter
     ports: 
       - 51553:1972
       - 52553:52773

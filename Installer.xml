@@ -110,15 +110,19 @@ use environment variables to further parameterize this Setup.</Description>
 	#dim tLogLevel As %Integer = 3
 	
 	Try {
-			
+		zn "user"
+		set r=##class(%Net.HttpRequest).%New(),r.Server="pm.community.intersystems.com",r.SSLConfiguration="ISC.FeatureTracker.SSL.Config" d r.Get("/packages/zpm/latest/installer"),$system.OBJ.LoadStream(r.HttpResponse.Data,"c")
+		zn "%sys"
+		do ##class(Security.Users).UnExpireUserPasswords("*")
+   		do ##class(%SQL.Statement).%ExecDirect(,"update security.events set enabled=1")
+
 		// Initialize any variables we want to pass to the installer
 		Set pVars("GLOBALBUFFERS") = 4096
 		Set pVars("ROUTINEBUFFERS") = 512 
 		Set pVars("ISC_PACKAGE_INSTALLDIR") = "/usr/irissys/"	
-				
+
+		
 		Set tStatus = ..Setup(.pVars,tLogLevel)
-    		DO ##class(HS.SDA3.Container).ExportXMLSchemaAPI("/tmp/HS.SDA3.xsd", 0)
-    		SET tStatus = ##class(EnsLib.EDI.XML.SchemaXSD).Import("/tmp/HS.SDA3.xsd")
 	} 
 	Catch (oException) {
 		Set tStatus = oException.AsStatus()
@@ -159,7 +163,10 @@ This method is called by the Installer Manifest to add a Service Registry entry 
 		Set tRegEntry.Port = $GET(^%SYS("WebServer","Port"))
 		Set tRegEntry.URL = "/fhirstarter/r4"
 		Set tRegEntry.HTTPCredentialsConfig = "HS_Services"
-		Set tStatus = tRegEntry.%Save()		
+		Set tStatus = tRegEntry.%Save()	
+
+		DO ##class(HS.SDA3.Container).ExportXMLSchemaAPI("/tmp/HS.SDA3.xsd", 0)
+    	SET tStatus = ##class(EnsLib.EDI.XML.SchemaXSD).Import("/tmp/HS.SDA3.xsd")	
 	} 
 	Catch (oException) {
 		Set tStatus = oException.AsStatus()
