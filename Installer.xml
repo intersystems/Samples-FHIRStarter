@@ -117,8 +117,6 @@ use environment variables to further parameterize this Setup.</Description>
 		Set pVars("ISC_PACKAGE_INSTALLDIR") = "/usr/irissys/"	
 				
 		Set tStatus = ..Setup(.pVars,tLogLevel)
-    		DO ##class(HS.SDA3.Container).ExportXMLSchemaAPI("/tmp/HS.SDA3.xsd", 0)
-    		SET tStatus = ##class(EnsLib.EDI.XML.SchemaXSD).Import("/tmp/HS.SDA3.xsd")
 	} 
 	Catch (oException) {
 		Set tStatus = oException.AsStatus()
@@ -159,7 +157,10 @@ This method is called by the Installer Manifest to add a Service Registry entry 
 		Set tRegEntry.Port = $GET(^%SYS("WebServer","Port"))
 		Set tRegEntry.URL = "/fhirstarter/r4"
 		Set tRegEntry.HTTPCredentialsConfig = "HS_Services"
-		Set tStatus = tRegEntry.%Save()		
+		Set tStatus = tRegEntry.%Save()	
+
+		DO ##class(HS.SDA3.Container).ExportXMLSchemaAPI("/tmp/HS.SDA3.xsd", 0)
+    	SET tStatus = ##class(EnsLib.EDI.XML.SchemaXSD).Import("/tmp/HS.SDA3.xsd")	
 	} 
 	Catch (oException) {
 		Set tStatus = oException.AsStatus()
